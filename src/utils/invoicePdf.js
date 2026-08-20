@@ -1,0 +1,203 @@
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import dayjs from 'dayjs';
+import settingsService from '../services/settingsService';
+
+// Overpayment shows as credit, never a negative "balance due" — a negative number reads as a
+// bug to a billing staff member, not a feature.
+export function balanceLabel(balanceAmount) {
+  const balance = Number(balanceAmount ?? 0);
+  if (balance < 0) return { label: 'Overpayment / Credit', value: Math.abs(balance), tone: 'info' };
+  return { label: 'Balance Due', value: balance, tone: balance > 0 ? 'danger' : 'success' };
+}
+
+let cachedCompany = null;
+export async function getCompanyDetails() {
+  if (cachedCompany) return cachedCompany;
+  try {
+    const data = await settingsService.getAll();
+    const list = Array.isArray(data) ? data : data?.content || [];
+    const get = (key, fallback) => list.find((s) => s.settingKey === key)?.settingValue || fallback;
+    cachedCompany = {
+      name: get('company_name', 'AutoCare ERP'),
+      address: get('company_address', ''),
+      phone: get('company_phone', ''),
+      email: get('company_email', ''),
+      gstin: get('company_gstin', ''),
+    };
+  } catch {
+    cachedCompany = { name: 'AutoCare ERP', address: '', phone: '', email: '', gstin: '' };
+  }
+  return cachedCompany;
+}
+
+function drawCompanyHeader(doc, company) {
+  doc.setFontSize(15);
+  doc.text(company.name, 14, 16);
+  doc.setFontSize(9);
+  const lines = [company.address, [company.phone, company.email].filter(Boolean).join('  ·  '), company.gstin ? `GSTIN: ${company.gstin}` : null].filter(Boolean);
+  doc.text(lines, 14, 22);
+  return 22 + lines.length * 5 + 4;
+}
+
+/** Builds (but does not save) the tax invoice document. Returns the jsPDF instance. */
+export function buildInvoiceDoc(invoice, company) {
+  const doc = new jsPDF();
+  const services = (invoice.items || []).filter((l) => l.itemType === 'SERVICE');
+  const products = (invoice.items || []).filter((l) => l.itemType !== 'SERVICE');
+
+  let y = drawCompanyHeader(doc, company);
+  doc.setFontSize(12);
+  doc.text('TAX INVOICE', 14, y);
+  y += 8;
+  doc.setFontSize(9);
+
+  [
+    [`Invoice No.: ${invoice.invoiceNumber}`, `Date: ${dayjs(invoice.invoiceDate || invoice.createdAt).format('DD MMM YYYY')}`],
+    [`Customer: ${invoice.customerName || '-'}`, `Mobile: ${invoice.customerPhone || '-'}`],
+    [`Vehicle: ${invoice.vehicleModel || '-'}`, `Registration: ${invoice.registrationNumber || '-'}`],
+    [`Odometer: ${invoice.odometer ? `${invoice.odometer} km` : '-'}`, `Payment: ${invoice.paymentMethod || '-'}`],
+  ].forEach(([l, r]) => {
+    doc.text(l, 14, y);
+    doc.text(r, 110, y);
+    y += 6;
+  });
+  y += 2;
+
+  const table = (title, rows) => {
+    if (rows.length === 0) return;
+    doc.setFontSize(10);
+    doc.text(title, 14, y);
+    autoTable(doc, {
+      startY: y + 2,
+      head: [['Description', 'Qty', 'Rate', 'GST', 'Amount']],
+      body: rows.map((l) => [
+        l.description || l.itemName,
+        String(l.quantity),
+        Number(l.unitPrice).toFixed(2),
+        `${Number(l.taxPercentage ?? 0)}%`,
+        Number(l.totalAmount).toFixed(2),
+      ]),
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [37, 99, 235] },
+      margin: { left: 14, right: 14 },
+    });
+    y = doc.lastAutoTable.finalY + 6;
+  };
+  table('SERVICES', services);
+  table('PRODUCTS / SPARE PARTS', products);
+
+  const { label: balLabel, value: balValue } = balanceLabel(invoice.balanceAmount);
+  const summary = [
+    ['Subtotal', Number(invoice.subtotal ?? 0).toFixed(2)],
+    ['Discount', Number(invoice.discountAmount ?? 0).toFixed(2)],
+    ['CGST', Number(invoice.cgstAmount ?? 0).toFixed(2)],
+    ['SGST', Number(invoice.sgstAmount ?? 0).toFixed(2)],
+    ['Grand Total', Number(invoice.grandTotal ?? 0).toFixed(2)],
+    ['Paid', Number(invoice.paidAmount ?? 0).toFixed(2)],
+    [balLabel, balValue.toFixed(2)],
+    ['Payment Status', invoice.paymentStatus || '-'],
+  ];
+
+  autoTable(doc, {
+    startY: y,
+    body: summary,
+    theme: 'plain',
+    styles: { fontSize: 9, halign: 'right' },
+    columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } },
+    margin: { left: 118 },
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 14;
+  doc.setFontSize(8);
+  doc.text('Thank you for visiting us.', 14, finalY);
+  doc.text('Terms & Conditions apply.', 14, finalY + 5);
+  doc.text('Authorized Signature: ____________________', 130, finalY + 20);
+
+  return doc;
+}
+
+/** Builds (but does not save) a payment receipt document. Returns the jsPDF instance. */
+export function buildReceiptDoc(payment, invoice, company) {
+  const doc = new jsPDF();
+  let y = drawCompanyHeader(doc, company);
+  doc.setFontSize(12);
+  doc.text('PAYMENT RECEIPT', 14, y);
+  y += 8;
+  doc.setFontSize(9);
+
+  const { label: balLabel, value: balValue } = balanceLabel(invoice?.balanceAmount);
+
+  [
+    [`Receipt No.: RCPT-${payment.transactionId}`, `Date: ${dayjs(payment.paymentDate).format('DD MMM YYYY, HH:mm')}`],
+    [`Customer: ${invoice?.customerName || '-'}`, `Mobile: ${invoice?.customerPhone || '-'}`],
+    [`Invoice No.: ${invoice?.invoiceNumber || '-'}`, `Vehicle: ${invoice?.vehicleModel || '-'} (${invoice?.registrationNumber || '-'})`],
+  ].forEach(([l, r]) => {
+    doc.text(l, 14, y);
+    doc.text(r, 105, y);
+    y += 6;
+  });
+  y += 4;
+
+  autoTable(doc, {
+    startY: y,
+    head: [['Payment Method', 'Reference', 'Amount Received']],
+    body: [[payment.paymentMethod || '-', payment.transactionReference || '-', Number(payment.amount ?? 0).toFixed(2)]],
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [37, 99, 235] },
+    margin: { left: 14, right: 14 },
+  });
+  y = doc.lastAutoTable.finalY + 6;
+
+  if (invoice) {
+    autoTable(doc, {
+      startY: y,
+      body: [
+        ['Invoice Grand Total', Number(invoice.grandTotal ?? 0).toFixed(2)],
+        ['Total Paid to Date', Number(invoice.paidAmount ?? 0).toFixed(2)],
+        [balLabel, balValue.toFixed(2)],
+        ['Payment Status', invoice.paymentStatus || '-'],
+      ],
+      theme: 'plain',
+      styles: { fontSize: 9, halign: 'right' },
+      columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } },
+      margin: { left: 118 },
+    });
+    y = doc.lastAutoTable.finalY;
+  }
+
+  doc.setFontSize(8);
+  doc.text('Thank you for your payment.', 14, y + 14);
+
+  return doc;
+}
+
+export async function downloadInvoicePdf(invoice) {
+  const company = await getCompanyDetails();
+  buildInvoiceDoc(invoice, company).save(`${invoice.invoiceNumber}.pdf`);
+}
+
+export async function downloadReceiptPdf(payment, invoice) {
+  const company = await getCompanyDetails();
+  buildReceiptDoc(payment, invoice, company).save(`Receipt-${payment.transactionId}.pdf`);
+}
+
+/** Web Share API when available (mobile browsers, HTTPS), falls back to a plain download. */
+export async function shareInvoicePdf(invoice) {
+  const company = await getCompanyDetails();
+  const doc = buildInvoiceDoc(invoice, company);
+  const fileName = `${invoice.invoiceNumber}.pdf`;
+  const blob = doc.output('blob');
+  const file = new File([blob], fileName, { type: 'application/pdf' });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    await navigator.share({
+      files: [file],
+      title: `Invoice ${invoice.invoiceNumber}`,
+      text: `Invoice ${invoice.invoiceNumber} for ${invoice.customerName || 'customer'} — ${company.name}`,
+    });
+    return 'shared';
+  }
+  doc.save(fileName);
+  return 'downloaded';
+}
