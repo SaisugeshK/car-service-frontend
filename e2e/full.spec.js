@@ -13,8 +13,8 @@ test.describe('1. Login', () => {
   test('invalid password shows error toast, stays on login', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel('Email').fill(MANAGER.email);
-    await page.getByLabel('Password').fill('WrongPassword1!');
-    await page.getByRole('button', { name: /sign in/i }).click();
+    await page.getByLabel(/^password/i).fill('WrongPassword1!');
+    await page.getByRole('button', { name: /^login$/i }).click();
     await expect(page.locator('text=/invalid credentials/i')).toBeVisible({ timeout: 10000 });
     await expect(page).toHaveURL(/\/login/);
     // Regression: the global axios interceptor and Login's own catch both used to toast the
@@ -25,8 +25,8 @@ test.describe('1. Login', () => {
   test('invalid username (unknown email) shows error', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel('Email').fill('nobody-here@example.com');
-    await page.getByLabel('Password').fill('Whatever1!');
-    await page.getByRole('button', { name: /sign in/i }).click();
+    await page.getByLabel(/^password/i).fill('Whatever1!');
+    await page.getByRole('button', { name: /^login$/i }).click();
     // Backend returns a distinct "User Not Found" for an unknown email vs "Invalid Credentials"
     // for a wrong password on a real account — a minor account-enumeration signal (an attacker
     // can tell which emails are registered), noted in the QA report; not fixed here since it's
@@ -38,7 +38,7 @@ test.describe('1. Login', () => {
     await page.goto('/login');
     let loginCalled = false;
     page.on('request', (r) => { if (r.url().includes('/auth/login')) loginCalled = true; });
-    await page.getByRole('button', { name: /sign in/i }).click();
+    await page.getByRole('button', { name: /^login$/i }).click();
     await page.waitForTimeout(400);
     expect(loginCalled).toBe(false);
     await expect(page).toHaveURL(/\/login/);
@@ -85,6 +85,43 @@ test.describe('1. Login', () => {
     });
     await page.goto('/vehicles');
     await expect(page).toHaveURL(/\/login/, { timeout: 8000 });
+  });
+});
+
+test.describe('1b. Login branding (Company Profile)', () => {
+  test('login page renders the dynamic company name/tagline from the public profile endpoint, not a hardcoded brand', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.locator('text=V.A BOSS DETAILING')).toBeVisible({ timeout: 8000 });
+    await expect(page.locator('text=ONE STOP SOLUTION')).toBeVisible();
+    await expect(page.locator('text=Car & Bike Service Center')).toBeVisible();
+    // The old hardcoded brand must be gone from the rendered page entirely.
+    await expect(page.locator('text=AutoCare ERP')).toHaveCount(0);
+    await expect(page.locator('text=AUTOCARE')).toHaveCount(0);
+  });
+
+  test('public company-profile endpoint is reachable with no Authorization header and exposes only safe fields', async ({ request }) => {
+    const res = await request.get('http://localhost:8090/api/public/company-profile');
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    expect(body).toHaveProperty('companyName');
+    expect(body).toHaveProperty('tagline');
+    expect(body).toHaveProperty('logo');
+    expect(body).toHaveProperty('phone');
+    // Never leaks address/GSTIN/email — those stay behind the authenticated settings endpoint.
+    expect(body).not.toHaveProperty('address');
+    expect(body).not.toHaveProperty('gstin');
+    expect(body).not.toHaveProperty('email');
+  });
+
+  test('browser tab title reflects the dynamic company name', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page).toHaveTitle(/V\.A BOSS DETAILING/, { timeout: 8000 });
+  });
+
+  test('sidebar brand also uses the same Company Profile once logged in', async ({ page }) => {
+    await login(page);
+    await expect(page.locator('.erp-sidebar-brand-name')).toHaveText('V.A BOSS DETAILING');
+    await expect(page.locator('.erp-sidebar-brand-sub')).toHaveText('ONE STOP SOLUTION');
   });
 });
 
@@ -213,7 +250,6 @@ test.describe('4. Complete E2E workflow — Login through Review', () => {
     await page.getByLabel(/customer complaint/i).fill('E2E: brake noise on braking');
     await page.getByRole('button', { name: /create job card/i }).click();
     await expect(page).toHaveURL(/\/job-cards\/\d+/, { timeout: 8000 });
-    const jobCardUrl = page.url();
 
     // --- Inspection tab: at least loads without error ---
     await page.getByRole('button', { name: 'Inspection', exact: true }).click();
@@ -264,10 +300,11 @@ test.describe('4. Complete E2E workflow — Login through Review', () => {
     await page.getByRole('button', { name: /^save$/i }).click();
     await expect(page.locator('text=/success|recorded|added/i').first()).toBeVisible({ timeout: 8000 }).catch(() => {});
 
-    // --- Delivery, as MANAGER: checklist must gate the button, AND (confirmed bug, fixed to
-    // fail loudly instead of silently) the staff dropdown cannot load for this role because
-    // GET /api/users is SUPER_ADMIN-only on the backend — a real production-blocking gap for
-    // the role that actually runs day-to-day deliveries. ---
+    // --- Delivery, as MANAGER: checklist must gate the button. GET /api/users used to be
+    // SUPER_ADMIN-only, which meant a MANAGER — the role that actually runs day-to-day
+    // deliveries — could never populate "Delivered By" at all (backend fix: reading the staff
+    // list is now open to any authenticated role; only creating/editing/deleting a user stays
+    // SUPER_ADMIN-only). MANAGER can now complete the whole flow directly, no workaround. ---
     await page.goto('/job-cards');
     await page.locator('tr', { hasText: reg }).first().click();
     await page.getByRole('button', { name: 'Invoice', exact: true }).click();
@@ -277,43 +314,19 @@ test.describe('4. Complete E2E workflow — Login through Review', () => {
     await page.locator('#dc-clean').check();
     await page.locator('#dc-belongings').check();
     await page.locator('#dc-keys').check();
-    await expect(page.locator('text=/staff list couldn.t be loaded/i')).toBeVisible({ timeout: 8000 });
-    await expect(confirmBtn).toBeDisabled(); // MANAGER can never populate "Delivered By" — confirmed blocked
+    await expect(confirmBtn).toBeDisabled(); // still missing "Delivered By"
+    await page.locator('select').filter({ hasText: 'Select staff member' }).selectOption({ index: 1 });
+    await expect(confirmBtn).toBeEnabled();
+    await confirmBtn.click();
+    await expect(page.locator('text=/marked as delivered/i')).toBeVisible({ timeout: 8000 });
 
-    // Filter out everything this deliberately-triggered 403 produces (the browser's own
-    // "Failed to load resource: 403" resource-error logs, plus the interceptor's toast) before
-    // the end-of-test console assertion — everything else on this page must still be clean.
-    const expected403 = (e) => /don.t have permission/i.test(e) || /failed to load resource.*403/i.test(e);
-
-    // --- Complete delivery + review as SUPER_ADMIN (documents the workaround; the real fix is
-    // backend-side — see the QA report) ---
-    await logout(page);
-    promoteTestUserToSuperAdmin();
-    try {
-      await login(page);
-      await page.goto(jobCardUrl);
-      await page.getByRole('button', { name: 'Invoice', exact: true }).click();
-      const adminConfirmBtn = page.getByRole('button', { name: /confirm delivery/i });
-      await expect(adminConfirmBtn).toBeVisible({ timeout: 8000 });
-      await page.locator('#dc-clean').check();
-      await page.locator('#dc-belongings').check();
-      await page.locator('#dc-keys').check();
-      await page.locator('select').filter({ hasText: 'Select staff member' }).selectOption({ index: 1 });
-      await expect(adminConfirmBtn).toBeEnabled();
-      await adminConfirmBtn.click();
-      await expect(page.locator('text=/marked as delivered/i')).toBeVisible({ timeout: 8000 });
-
-      // --- Review ---
-      const reviewBtn = page.getByRole('button', { name: /review/i }).last();
-      if (await reviewBtn.isVisible().catch(() => false)) {
-        await reviewBtn.click();
-      }
-    } finally {
-      demoteTestUserToManager();
+    // --- Review ---
+    const reviewBtn = page.getByRole('button', { name: /review/i }).last();
+    if (await reviewBtn.isVisible().catch(() => false)) {
+      await reviewBtn.click();
     }
 
-    const unexpectedConsoleErrors = consoleErrors.filter((e) => !expected403(e));
-    expect(unexpectedConsoleErrors, `console errors during full workflow: ${unexpectedConsoleErrors.join('\n')}`).toEqual([]);
+    expect(consoleErrors, `console errors during full workflow: ${consoleErrors.join('\n')}`).toEqual([]);
     expect(pageErrors, `uncaught page errors: ${pageErrors.join('\n')}`).toEqual([]);
     expect(failedRequests, `failed network requests: ${failedRequests.join('\n')}`).toEqual([]);
   });

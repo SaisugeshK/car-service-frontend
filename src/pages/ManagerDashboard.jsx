@@ -12,6 +12,7 @@ import serviceRemindersService from '../services/serviceRemindersService';
 import { useAuth } from '../context/AuthContext';
 import Loader from '../components/Loader';
 import ErrorPage from './ErrorPage';
+import { DASHBOARD_TONES as T } from '../utils/dashboardTheme';
 
 const asList = (data) => (Array.isArray(data) ? data : data?.content || data?.data || []);
 const isToday = (dateStr) => {
@@ -33,13 +34,13 @@ function StatCard({ icon: Icon, label, value, sub, to, color, bgColor }) {
   const content = (
     <div style={{
       background: '#fff', borderRadius: 14, padding: '16px 18px', border: '1px solid #e2e8f0',
-      boxShadow: '0 2px 12px rgba(37,99,235,0.06)', display: 'flex', alignItems: 'center', gap: 14, height: '100%',
+      boxShadow: '0 1px 2px rgba(23,20,18,0.04), 0 4px 12px rgba(23,20,18,0.05)', display: 'flex', alignItems: 'center', gap: 14, height: '100%',
     }}>
       <div style={{
-        width: 42, height: 42, borderRadius: 12, background: bgColor || 'rgba(37,99,235,0.1)',
+        width: 42, height: 42, borderRadius: 12, background: bgColor || T.brand.bg,
         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
       }}>
-        <Icon size={18} color={color || '#2563eb'} />
+        <Icon size={18} color={color || T.brand.color} />
       </div>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</div>
@@ -132,55 +133,55 @@ export default function ManagerDashboard() {
 
       <div className="row g-3 mb-3">
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiClipboard} label="Today's Jobs" value={stats.todaysJobs} to="/job-cards" color="#2563eb" bgColor="rgba(37,99,235,0.1)" />
+          <StatCard icon={FiClipboard} label="Today's Jobs" value={stats.todaysJobs} to="/job-cards" color={T.brand.color} bgColor={T.brand.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiCheckSquare} label="Pending Inspections" value={stats.pendingInspections} to="/inspections" color="#0ea5e9" bgColor="rgba(14,165,233,0.1)" />
+          <StatCard icon={FiCheckSquare} label="Pending Inspections" value={stats.pendingInspections} to="/inspections" color={T.warning.color} bgColor={T.warning.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiFileText} label="Pending Estimates" value={stats.pendingEstimates} to="/estimates" color="#f59e0b" bgColor="rgba(245,158,11,0.1)" />
+          <StatCard icon={FiFileText} label="Pending Estimates" value={stats.pendingEstimates} to="/estimates" color={T.warning.color} bgColor={T.warning.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiClock} label="Approval Pending" value={stats.approvalPending} to="/workshop-board" color="#f59e0b" bgColor="rgba(245,158,11,0.1)" />
-        </div>
-      </div>
-
-      <div className="row g-3 mb-3">
-        <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiCheckCircle} label="Approved Jobs" value={stats.approvedJobs} to="/workshop-board" color="#16a34a" bgColor="rgba(22,163,74,0.1)" />
-        </div>
-        <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiTool} label="Jobs In Progress" value={stats.inProgress} to="/workshop-board" color="#2563eb" bgColor="rgba(37,99,235,0.1)" />
-        </div>
-        <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiTruck} label="Waiting for Parts" value={stats.waitingParts} to="/workshop-board" color="#f59e0b" bgColor="rgba(245,158,11,0.1)" />
-        </div>
-        <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiAlertTriangle} label="Additional Approval Requests" value={stats.additionalApproval} to="/workshop-board" color="#dc2626" bgColor="rgba(220,38,38,0.1)" />
+          <StatCard icon={FiClock} label="Approval Pending" value={stats.approvalPending} to="/workshop-board" color={T.warning.color} bgColor={T.warning.bg} />
         </div>
       </div>
 
       <div className="row g-3 mb-3">
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiCheckSquare} label="Quality Checks" value={stats.qualityChecks} to="/workshop-board" color="#8b5cf6" bgColor="rgba(139,92,246,0.1)" />
+          <StatCard icon={FiCheckCircle} label="Approved Jobs" value={stats.approvedJobs} to="/workshop-board" color={T.success.color} bgColor={T.success.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiCheckCircle} label="Ready for Delivery" value={stats.readyForDelivery} to="/workshop-board" color="#16a34a" bgColor="rgba(22,163,74,0.1)" />
+          <StatCard icon={FiTool} label="Jobs In Progress" value={stats.inProgress} to="/workshop-board" color={T.warning.color} bgColor={T.warning.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiFileText} label="Today's Billing" value={stats.todaysBillingCount} sub={currency(stats.todaysBillingAmount)} to="/invoices" color="#2563eb" bgColor="rgba(37,99,235,0.1)" />
+          <StatCard icon={FiTruck} label="Waiting for Parts" value={stats.waitingParts} to="/workshop-board" color={T.warning.color} bgColor={T.warning.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiCreditCard} label="Pending Payments" value={stats.pendingPaymentsCount} sub={currency(stats.pendingPaymentsAmount)} to="/payments" color="#dc2626" bgColor="rgba(220,38,38,0.1)" />
+          <StatCard icon={FiAlertTriangle} label="Additional Approval Requests" value={stats.additionalApproval} to="/workshop-board" color={T.danger.color} bgColor={T.danger.bg} />
         </div>
       </div>
 
       <div className="row g-3 mb-3">
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiAlertCircle} label="Customer Complaints" value={stats.openComplaints} to="/complaints" color="#dc2626" bgColor="rgba(220,38,38,0.1)" />
+          <StatCard icon={FiCheckSquare} label="Quality Checks" value={stats.qualityChecks} to="/workshop-board" color={T.neutral.color} bgColor={T.neutral.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiBell} label="Service Reminders Due" value={stats.dueReminders} to="/service-reminders" color="#f59e0b" bgColor="rgba(245,158,11,0.1)" />
+          <StatCard icon={FiCheckCircle} label="Ready for Delivery" value={stats.readyForDelivery} to="/workshop-board" color={T.success.color} bgColor={T.success.bg} />
+        </div>
+        <div className="col-sm-6 col-lg-3">
+          <StatCard icon={FiFileText} label="Today's Billing" value={stats.todaysBillingCount} sub={currency(stats.todaysBillingAmount)} to="/invoices" color={T.brand.color} bgColor={T.brand.bg} />
+        </div>
+        <div className="col-sm-6 col-lg-3">
+          <StatCard icon={FiCreditCard} label="Pending Payments" value={stats.pendingPaymentsCount} sub={currency(stats.pendingPaymentsAmount)} to="/payments" color={T.danger.color} bgColor={T.danger.bg} />
+        </div>
+      </div>
+
+      <div className="row g-3 mb-3">
+        <div className="col-sm-6 col-lg-3">
+          <StatCard icon={FiAlertCircle} label="Customer Complaints" value={stats.openComplaints} to="/complaints" color={T.danger.color} bgColor={T.danger.bg} />
+        </div>
+        <div className="col-sm-6 col-lg-3">
+          <StatCard icon={FiBell} label="Service Reminders Due" value={stats.dueReminders} to="/service-reminders" color={T.warning.color} bgColor={T.warning.bg} />
         </div>
       </div>
 
@@ -196,8 +197,8 @@ export default function ManagerDashboard() {
               return (
                 <div key={t.name} className="d-flex align-items-center gap-2 small" style={{ cursor: 'pointer' }} onClick={() => navigate('/workshop-board')}>
                   <span style={{ width: 140 }} className="fw-semibold text-truncate">{t.name}</span>
-                  <div className="flex-grow-1" style={{ background: '#e2e8f0', borderRadius: 4, height: 10 }}>
-                    <div style={{ width: `${pct}%`, background: '#2563eb', height: 10, borderRadius: 4 }} />
+                  <div className="flex-grow-1" style={{ background: 'var(--erp-border)', borderRadius: 4, height: 10 }}>
+                    <div style={{ width: `${pct}%`, background: 'linear-gradient(90deg, var(--erp-gold-light), var(--erp-gold))', height: 10, borderRadius: 4 }} />
                   </div>
                   <span className="text-secondary" style={{ width: 28, textAlign: 'right' }}>{t.count}</span>
                 </div>

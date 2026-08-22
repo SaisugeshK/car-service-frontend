@@ -830,7 +830,7 @@ function EstimateTab({ jobCard, onSaved }) {
           </div>
         )}
         <div className="erp-card p-3 mb-3">
-          <label className="form-label small text-secondary mb-2">Adding as</label>
+          <label className="form-label d-block small text-secondary mb-2">Adding as</label>
           <div className="btn-group mb-3" role="group">
             {WORK_CATEGORIES.map((wc) => (
               <button
@@ -843,7 +843,7 @@ function EstimateTab({ jobCard, onSaved }) {
               </button>
             ))}
           </div>
-          <label className="form-label">Add Service</label>
+          <label className="form-label d-block">Add Service</label>
           <input className="form-control mb-2" placeholder="Search service..." value={serviceQuery} onChange={(e) => setServiceQuery(e.target.value)} />
           {serviceResults.length > 0 && (
             <div className="list-group mb-2">

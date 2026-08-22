@@ -24,6 +24,7 @@ import reviewsService from '../services/reviewsService';
 import { useAuth } from '../context/AuthContext';
 import Loader from '../components/Loader';
 import ErrorPage from './ErrorPage';
+import { DASHBOARD_TONES as T } from '../utils/dashboardTheme';
 
 const asList = (data) => (Array.isArray(data) ? data : data?.content || data?.data || []);
 const isToday = (dateStr) => {
@@ -45,17 +46,17 @@ function StatCard({ icon: Icon, label, value, to, color, bgColor }) {
   const content = (
     <div style={{
       background: '#fff', borderRadius: 14, padding: '18px 20px', border: '1px solid #e2e8f0',
-      boxShadow: '0 2px 12px rgba(37,99,235,0.06)', display: 'flex', alignItems: 'center', gap: 14,
+      boxShadow: '0 1px 2px rgba(23,20,18,0.04), 0 4px 12px rgba(23,20,18,0.05)', display: 'flex', alignItems: 'center', gap: 14,
       height: '100%', transition: 'transform 0.15s, box-shadow 0.15s',
     }}
       onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
       onMouseLeave={(e) => { e.currentTarget.style.transform = ''; }}
     >
       <div style={{
-        width: 46, height: 46, borderRadius: 12, background: bgColor || 'rgba(37,99,235,0.1)',
+        width: 46, height: 46, borderRadius: 12, background: bgColor || T.brand.bg,
         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
       }}>
-        <Icon size={20} color={color || '#2563eb'} />
+        <Icon size={20} color={color || T.brand.color} />
       </div>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</div>
@@ -205,55 +206,55 @@ export default function Dashboard() {
 
       <div className="row g-3 mb-3">
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiTrendingUp} label="Today's Revenue" value={currency(kpis.todaysRevenue)} to="/invoices" color="#2563eb" bgColor="rgba(37,99,235,0.1)" />
+          <StatCard icon={FiTrendingUp} label="Today's Revenue" value={currency(kpis.todaysRevenue)} to="/invoices" color={T.brand.color} bgColor={T.brand.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiTool} label="Service Revenue" value={currency(kpis.serviceRevenue)} color="#0ea5e9" bgColor="rgba(14,165,233,0.1)" />
+          <StatCard icon={FiTool} label="Service Revenue" value={currency(kpis.serviceRevenue)} color={T.brand.color} bgColor={T.brand.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiFileText} label="Parts Revenue" value={currency(kpis.partsRevenue)} color="#8b5cf6" bgColor="rgba(139,92,246,0.1)" />
+          <StatCard icon={FiFileText} label="Parts Revenue" value={currency(kpis.partsRevenue)} color={T.brand.color} bgColor={T.brand.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiDollarSign} label="Today's Payments" value={currency(kpis.todaysPayments)} to="/payments" color="#16a34a" bgColor="rgba(22,163,74,0.1)" />
+          <StatCard icon={FiDollarSign} label="Today's Payments" value={currency(kpis.todaysPayments)} to="/payments" color={T.success.color} bgColor={T.success.bg} />
         </div>
       </div>
 
       <div className="row g-3 mb-3">
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiAlertTriangle} label="Outstanding Amount" value={currency(kpis.outstanding)} to="/invoices" color="#dc2626" bgColor="rgba(220,38,38,0.1)" />
+          <StatCard icon={FiAlertTriangle} label="Outstanding Amount" value={currency(kpis.outstanding)} to="/invoices" color={T.danger.color} bgColor={T.danger.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FaCarSide} label="Cars in Workshop" value={kpis.carsInWorkshop} to="/workshop-board" color="#2563eb" bgColor="rgba(37,99,235,0.1)" />
+          <StatCard icon={FaCarSide} label="Cars in Workshop" value={kpis.carsInWorkshop} to="/workshop-board" color={T.brand.color} bgColor={T.brand.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiCheckCircle} label="Ready for Delivery" value={kpis.readyForDelivery} to="/workshop-board" color="#16a34a" bgColor="rgba(22,163,74,0.1)" />
+          <StatCard icon={FiCheckCircle} label="Ready for Delivery" value={kpis.readyForDelivery} to="/workshop-board" color={T.success.color} bgColor={T.success.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiClock} label="Waiting for Approval" value={kpis.waitingApproval} to="/estimates" color="#f59e0b" bgColor="rgba(245,158,11,0.1)" />
-        </div>
-      </div>
-
-      <div className="row g-3 mb-4">
-        <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiTool} label="Jobs In Progress" value={kpis.inProgress} to="/workshop-board" color="#2563eb" bgColor="rgba(37,99,235,0.1)" />
-        </div>
-        <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiTruck} label="Waiting for Parts" value={kpis.waitingParts} to="/workshop-board" color="#f59e0b" bgColor="rgba(245,158,11,0.1)" />
-        </div>
-        <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiCalendar} label="Today's Appointments" value={kpis.todaysAppointments} to="/appointments" color="#0ea5e9" bgColor="rgba(14,165,233,0.1)" />
-        </div>
-        <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiAlertTriangle} label="Low Stock Parts" value={kpis.lowStock.length} to="/stock" color="#dc2626" bgColor="rgba(220,38,38,0.1)" />
+          <StatCard icon={FiClock} label="Waiting for Approval" value={kpis.waitingApproval} to="/estimates" color={T.warning.color} bgColor={T.warning.bg} />
         </div>
       </div>
 
       <div className="row g-3 mb-4">
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiStar} label="Average Rating" value={ratingStats.total > 0 ? `${ratingStats.average.toFixed(1)} / 5` : '—'} to="/reviews" color="#f59e0b" bgColor="rgba(245,158,11,0.1)" />
+          <StatCard icon={FiTool} label="Jobs In Progress" value={kpis.inProgress} to="/workshop-board" color={T.warning.color} bgColor={T.warning.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiUserCheck} label="Total Reviews" value={ratingStats.total} to="/reviews" color="#8b5cf6" bgColor="rgba(139,92,246,0.1)" />
+          <StatCard icon={FiTruck} label="Waiting for Parts" value={kpis.waitingParts} to="/workshop-board" color={T.warning.color} bgColor={T.warning.bg} />
+        </div>
+        <div className="col-sm-6 col-lg-3">
+          <StatCard icon={FiCalendar} label="Today's Appointments" value={kpis.todaysAppointments} to="/appointments" color={T.brand.color} bgColor={T.brand.bg} />
+        </div>
+        <div className="col-sm-6 col-lg-3">
+          <StatCard icon={FiAlertTriangle} label="Low Stock Parts" value={kpis.lowStock.length} to="/stock" color={T.danger.color} bgColor={T.danger.bg} />
+        </div>
+      </div>
+
+      <div className="row g-3 mb-4">
+        <div className="col-sm-6 col-lg-3">
+          <StatCard icon={FiStar} label="Average Rating" value={ratingStats.total > 0 ? `${ratingStats.average.toFixed(1)} / 5` : '—'} to="/reviews" color={T.neutral.color} bgColor={T.neutral.bg} />
+        </div>
+        <div className="col-sm-6 col-lg-3">
+          <StatCard icon={FiUserCheck} label="Total Reviews" value={ratingStats.total} to="/reviews" color={T.neutral.color} bgColor={T.neutral.bg} />
         </div>
       </div>
 

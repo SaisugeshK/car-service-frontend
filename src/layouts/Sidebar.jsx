@@ -30,6 +30,7 @@ import {
 } from 'react-icons/fi';
 import { FaCarSide } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
+import { useCompanyProfile } from '../context/CompanyProfileContext';
 
 // Workshop-focused structure — one entry per business concept, not per database table. Legacy
 // modules (Barcodes, Units, Product Taxes, Purchase/Sales Items, Invoice Items, Sales, Billing
@@ -112,6 +113,7 @@ export const NAV_GROUPS = [
 
 export default function Sidebar({ collapsed, onNavigate }) {
   const { isSuperAdmin } = useAuth();
+  const { companyName, tagline, logo } = useCompanyProfile();
   const visibleGroups = NAV_GROUPS.map((group) => ({
     ...group,
     items: group.items.filter((item) => !item.superAdminOnly || isSuperAdmin),
@@ -120,13 +122,17 @@ export default function Sidebar({ collapsed, onNavigate }) {
   return (
     <aside className={`erp-sidebar ${collapsed ? 'erp-sidebar-collapsed' : ''}`}>
       <div className="erp-sidebar-brand">
-        <div className="erp-sidebar-brand-icon">
-          <FiTool size={18} />
-        </div>
+        {logo ? (
+          <img src={logo} alt={`${companyName} logo`} className="erp-sidebar-brand-icon" style={{ objectFit: 'contain', background: '#fff' }} />
+        ) : (
+          <div className="erp-sidebar-brand-icon">
+            <FiTool size={18} />
+          </div>
+        )}
         {!collapsed && (
           <div className="erp-sidebar-brand-text">
-            <span className="erp-sidebar-brand-name">AUTOCARE</span>
-            <span className="erp-sidebar-brand-sub">Service Management</span>
+            <span className="erp-sidebar-brand-name">{companyName}</span>
+            <span className="erp-sidebar-brand-sub">{tagline || 'Service Management'}</span>
           </div>
         )}
       </div>
