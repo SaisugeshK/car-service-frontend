@@ -4,17 +4,23 @@ import usersService from '../services/usersService';
 import rolesService from '../services/rolesService';
 import { userSchema } from '../utils/validationSchemas';
 import Loader from '../components/Loader';
+import ErrorPage from './ErrorPage';
 
 export default function Users() {
   const [roles, setRoles] = useState(null);
+  const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
-    rolesService.getAll().then((data) => {
-      const list = Array.isArray(data) ? data : data?.content || [];
-      setRoles(list);
-    });
-  }, []);
+  const load = () => {
+    setLoadError(false);
+    rolesService
+      .getAll()
+      .then((data) => setRoles(Array.isArray(data) ? data : data?.content || []))
+      .catch(() => setLoadError(true));
+  };
 
+  useEffect(load, []);
+
+  if (loadError) return <ErrorPage message="Could not load roles. Check your connection and try again." onRetry={load} />;
   if (!roles) return <Loader label="Loading roles..." />;
 
   const config = {

@@ -5,6 +5,7 @@ import salesService from '../services/salesService';
 import productsService from '../services/productsService';
 import * as yup from 'yup';
 import Loader from '../components/Loader';
+import ErrorPage from './ErrorPage';
 
 const schema = yup.object({
   saleId: yup.number().typeError('Sale is required').required('Sale is required'),
@@ -14,16 +15,23 @@ const schema = yup.object({
 
 export default function SalesItems() {
   const [refs, setRefs] = useState(null);
+  const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
-    Promise.all([salesService.getAll(), productsService.getAll()]).then(([sales, products]) => {
-      setRefs({
-        sales: Array.isArray(sales) ? sales : sales?.content || [],
-        products: Array.isArray(products) ? products : products?.content || [],
-      });
-    });
-  }, []);
+  const load = () => {
+    setLoadError(false);
+    Promise.all([salesService.getAll(), productsService.getAll()])
+      .then(([sales, products]) => {
+        setRefs({
+          sales: Array.isArray(sales) ? sales : sales?.content || [],
+          products: Array.isArray(products) ? products : products?.content || [],
+        });
+      })
+      .catch(() => setLoadError(true));
+  };
 
+  useEffect(load, []);
+
+  if (loadError) return <ErrorPage message="Could not load references. Check your connection and try again." onRetry={load} />;
   if (!refs) return <Loader label="Loading references..." />;
   const { sales, products } = refs;
 

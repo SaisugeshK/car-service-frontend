@@ -6,6 +6,6 @@ const base = createCrudService('/stock-movements', 'movementId');
 export const stockMovementsService = {
   ...base,
   getByProductId: (productId) =>
-    api.get(`/stock-movements/${productId}`).then((res) => res.data),
+    api.get(`/stock-movements/product/${productId}`).then((res) => res.data),
 };
 export default stockMovementsService;

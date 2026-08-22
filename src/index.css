@@ -348,6 +348,36 @@ a {
 }
 
 /* ==========================================================================
+   Empty / error states — shared by EmptyState and ErrorPage so a "nothing here"
+   table and an "API failed" page read as the same design language, not two
+   unrelated plain-text blocks.
+   ========================================================================== */
+.erp-state {
+  padding: 44px 20px;
+}
+
+.erp-state-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+}
+
+.erp-state-icon-neutral {
+  background: var(--erp-bg);
+  border: 1px solid var(--erp-border);
+  color: var(--erp-text-secondary);
+}
+
+.erp-state-icon-danger {
+  background: var(--erp-danger-light);
+  color: var(--erp-danger);
+}
+
+/* ==========================================================================
    Buttons
    ========================================================================== */
 .btn {
@@ -477,7 +507,7 @@ a {
 }
 
 .table > thead {
-  background: #f1f5f9;
+  background: linear-gradient(135deg, var(--erp-primary), var(--erp-primary-dark));
 }
 
 .table > thead > tr > th {
@@ -485,8 +515,8 @@ a {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--erp-text-secondary);
-  border-bottom: 1px solid var(--erp-border);
+  color: #fff;
+  border-bottom: 1px solid var(--erp-primary-dark);
   padding: 12px 16px;
   white-space: nowrap;
 }
@@ -529,13 +559,39 @@ a {
 }
 
 .modal-header {
-  border-bottom: 1px solid var(--erp-border);
+  border-bottom: none;
+  border-radius: var(--erp-radius-lg) var(--erp-radius-lg) 0 0;
   padding: 18px 22px;
+}
+
+/* Header tone communicates the dialog's weight at a glance — a delete confirmation
+   shouldn't read the same as an ordinary "add a record" form. Default (no tone class
+   applied, or tone="primary") keeps the original blue gradient. */
+.modal-header-primary {
+  background: linear-gradient(135deg, var(--erp-primary), var(--erp-primary-dark));
+}
+
+.modal-header-danger {
+  background: linear-gradient(135deg, var(--erp-danger), #b91c1c);
+}
+
+.modal-header-warning {
+  background: linear-gradient(135deg, var(--erp-warning), #b45309);
 }
 
 .modal-title {
   font-weight: 700;
   font-size: 1.05rem;
+  color: #fff;
+}
+
+.modal-header .btn-close {
+  filter: brightness(0) invert(1);
+  opacity: 0.85;
+}
+
+.modal-header .btn-close:hover {
+  opacity: 1;
 }
 
 .modal-body {
@@ -670,5 +726,27 @@ a {
 @media (max-width: 575px) {
   .erp-page-title {
     font-size: 1.25rem;
+  }
+}
+
+/* ==========================================================================
+   Print (e.g. Inspection tab "Print" button) — hide chrome, keep content.
+   Elements the app never wants printed (action buttons, nav) opt out via .no-print.
+   ========================================================================== */
+@media print {
+  .erp-sidebar,
+  .erp-navbar,
+  .nav-tabs,
+  .no-print {
+    display: none !important;
+  }
+
+  .erp-content {
+    padding: 0;
+  }
+
+  .erp-card {
+    box-shadow: none;
+    border: 1px solid #ccc;
   }
 }

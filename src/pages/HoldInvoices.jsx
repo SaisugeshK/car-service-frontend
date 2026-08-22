@@ -7,6 +7,7 @@ import holdInvoicesService from '../services/holdInvoicesService';
 import DataTable from '../components/DataTable';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Loader from '../components/Loader';
+import ErrorPage from './ErrorPage';
 
 // Bills parked mid-billing (customer leaves the vehicle, comes back later) — a held bill never
 // touches stock, payment, or invoice numbering until it's resumed and actually completed in POS.
@@ -15,12 +16,15 @@ export default function HoldInvoices() {
   const [holds, setHolds] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
+  const [loadError, setLoadError] = useState(false);
 
   const load = () => {
     setIsLoading(true);
+    setLoadError(false);
     holdInvoicesService
       .getAll()
       .then((data) => setHolds(Array.isArray(data) ? data : data?.content || []))
+      .catch(() => setLoadError(true))
       .finally(() => setIsLoading(false));
   };
 
@@ -42,6 +46,7 @@ export default function HoldInvoices() {
     load();
   };
 
+  if (loadError) return <ErrorPage message="Could not load held bills. Check your connection and try again." onRetry={load} />;
   if (!holds) return <Loader label="Loading held bills..." />;
 
   return (

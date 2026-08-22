@@ -11,6 +11,7 @@ import Modal from '../components/Modal';
 import SearchBar from '../components/SearchBar';
 import Loader from '../components/Loader';
 import CustomerVehicleModal from '../components/CustomerVehicleModal';
+import ErrorPage from './ErrorPage';
 
 const STATUS_OPTIONS = ['BOOKED', 'CONFIRMED', 'ARRIVED', 'NO_SHOW', 'CANCELLED', 'COMPLETED'];
 const asList = (data) => (Array.isArray(data) ? data : data?.content || []);
@@ -30,9 +31,12 @@ export default function Appointments() {
   const [showCombined, setShowCombined] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
-  const loadAppointments = () =>
-    appointmentsService.getAll().then((data) => setAppointments(asList(data)));
+  const loadAppointments = () => {
+    setLoadError(false);
+    return appointmentsService.getAll().then((data) => setAppointments(asList(data))).catch(() => setLoadError(true));
+  };
   const loadCustomers = () => customersService.getAll().then((data) => setCustomers(asList(data)));
   const loadVehicles = () => vehiclesService.getAll().then((data) => setVehicles(asList(data)));
 
@@ -113,6 +117,7 @@ export default function Appointments() {
     }
   };
 
+  if (loadError) return <ErrorPage message="Could not load appointments. Check your connection and try again." onRetry={loadAppointments} />;
   if (!appointments) return <Loader label="Loading appointments..." />;
 
   return (

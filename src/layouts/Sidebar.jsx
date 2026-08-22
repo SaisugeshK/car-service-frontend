@@ -23,8 +23,13 @@ import {
   FiPercent,
   FiUsers,
   FiShield,
+  FiStar,
+  FiGift,
+  FiAlertCircle,
+  FiActivity,
 } from 'react-icons/fi';
 import { FaCarSide } from 'react-icons/fa';
+import { useAuth } from '../context/AuthContext';
 
 // Workshop-focused structure — one entry per business concept, not per database table. Legacy
 // modules (Barcodes, Units, Product Taxes, Purchase/Sales Items, Invoice Items, Sales, Billing
@@ -83,24 +88,35 @@ export const NAV_GROUPS = [
     items: [
       { to: '/service-reminders', label: 'Service Reminders', icon: FiBell },
       { to: '/follow-ups', label: 'Follow-ups', icon: FiPhoneCall },
+      { to: '/reviews', label: 'Reviews', icon: FiStar },
+      { to: '/offers', label: 'Offers', icon: FiGift },
+      { to: '/complaints', label: 'Complaints', icon: FiAlertCircle },
     ],
   },
   {
     title: 'Reports',
-    items: [{ to: '/reports', label: 'Reports', icon: FiPieChart }],
+    // Owner-level financial reporting — SUPER_ADMIN only per Phase 19 role spec.
+    items: [{ to: '/reports', label: 'Reports', icon: FiPieChart, superAdminOnly: true }],
   },
   {
     title: 'Settings',
     items: [
-      { to: '/settings', label: 'Business Settings', icon: FiSettings },
+      { to: '/settings', label: 'Business Settings', icon: FiSettings, superAdminOnly: true },
       { to: '/product-taxes', label: 'Tax / GST', icon: FiPercent },
-      { to: '/users', label: 'Users', icon: FiUsers },
-      { to: '/roles', label: 'Roles', icon: FiShield },
+      { to: '/users', label: 'Users', icon: FiUsers, superAdminOnly: true },
+      { to: '/roles', label: 'Roles', icon: FiShield, superAdminOnly: true },
+      { to: '/audit-log', label: 'Audit Log', icon: FiActivity, superAdminOnly: true },
     ],
   },
 ];
 
 export default function Sidebar({ collapsed, onNavigate }) {
+  const { isSuperAdmin } = useAuth();
+  const visibleGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => !item.superAdminOnly || isSuperAdmin),
+  })).filter((group) => group.items.length > 0);
+
   return (
     <aside className={`erp-sidebar ${collapsed ? 'erp-sidebar-collapsed' : ''}`}>
       <div className="erp-sidebar-brand">
@@ -115,7 +131,7 @@ export default function Sidebar({ collapsed, onNavigate }) {
         )}
       </div>
       <nav className="erp-sidebar-nav">
-        {NAV_GROUPS.map((group) => (
+        {visibleGroups.map((group) => (
           <div key={group.title} className="mb-3">
             {!collapsed && <div className="erp-sidebar-group-title">{group.title}</div>}
             {group.items.map((item) => (

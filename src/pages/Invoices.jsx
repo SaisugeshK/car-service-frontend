@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
 import { FiEye, FiPrinter, FiDownload, FiShare2, FiCreditCard, FiRotateCcw, FiXCircle } from 'react-icons/fi';
@@ -13,6 +14,7 @@ import Pagination from '../components/Pagination';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Loader from '../components/Loader';
+import ErrorPage from './ErrorPage';
 
 const PAGE_SIZE = 8;
 
@@ -26,9 +28,12 @@ const shareInvoice = async (invoice) => {
 };
 
 export default function Invoices() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [invoices, setInvoices] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState('');
+  const [vehicleFilter, setVehicleFilter] = useState('ALL');
   const [page, setPage] = useState(1);
   const [viewing, setViewing] = useState(null);
   const [payingInvoice, setPayingInvoice] = useState(null);
@@ -41,26 +46,44 @@ export default function Invoices() {
 
   const load = () => {
     setIsLoading(true);
+    setLoadError(false);
     invoicesService
       .getAll()
       .then((data) => setInvoices(Array.isArray(data) ? data : data?.content || []))
+      .catch(() => setLoadError(true))
       .finally(() => setIsLoading(false));
   };
 
   useEffect(load, []);
 
+  // Deep link from global search (Phase 28) — /invoices?invoiceId=123 opens straight to that
+  // invoice's view modal instead of dumping the user on the plain list to re-search by hand.
+  useEffect(() => {
+    if (!invoices) return;
+    const targetId = searchParams.get('invoiceId');
+    if (!targetId) return;
+    const match = invoices.find((i) => String(i.invoiceId) === targetId);
+    if (match) setViewing(match);
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoices]);
+
   const filtered = useMemo(() => {
     if (!invoices) return [];
-    if (!search.trim()) return invoices;
+    let rows = invoices;
+    if (vehicleFilter !== 'ALL') {
+      rows = rows.filter((i) => i.vehicleCategory === vehicleFilter);
+    }
+    if (!search.trim()) return rows;
     const q = search.toLowerCase();
-    return invoices.filter(
+    return rows.filter(
       (i) =>
         i.invoiceNumber?.toLowerCase().includes(q) ||
         i.customerName?.toLowerCase().includes(q) ||
         i.customerPhone?.toLowerCase().includes(q) ||
         i.registrationNumber?.toLowerCase().includes(q)
     );
-  }, [invoices, search]);
+  }, [invoices, search, vehicleFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pagedRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -160,7 +183,20 @@ export default function Invoices() {
       render: (row) => dayjs(row.invoiceDate || row.createdAt).format('DD MMM YYYY'),
     },
     { key: 'customerName', label: 'Customer' },
-    { key: 'vehicleModel', label: 'Vehicle', render: (row) => row.vehicleModel || '—' },
+    {
+      key: 'vehicleModel',
+      label: 'Vehicle',
+      render: (row) => (
+        <>
+          {row.vehicleModel || '—'}
+          {row.vehicleCategory && (
+            <span className={`badge ms-1 ${row.vehicleCategory === 'BIKE' ? 'bg-info' : 'bg-secondary'}`}>
+              {row.vehicleCategory}
+            </span>
+          )}
+        </>
+      ),
+    },
     { key: 'registrationNumber', label: 'Registration', render: (row) => row.registrationNumber || '—' },
     { key: 'subtotal', label: 'Subtotal', render: (row) => Number(row.subtotal ?? 0).toFixed(2) },
     { key: 'taxAmount', label: 'Tax', render: (row) => Number(row.taxAmount ?? 0).toFixed(2) },
@@ -234,10 +270,27 @@ export default function Invoices() {
     },
   ];
 
+  if (loadError) return <ErrorPage message="Could not load invoices. Check your connection and try again." onRetry={load} />;
+
   return (
     <div>
       <div className="erp-page-header">
         <h1 className="erp-page-title">Invoices</h1>
+        <div className="btn-group" role="group" aria-label="Filter by vehicle type">
+          {['ALL', 'CAR', 'BIKE'].map((v) => (
+            <button
+              key={v}
+              type="button"
+              className={`btn btn-sm ${vehicleFilter === v ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => {
+                setVehicleFilter(v);
+                setPage(1);
+              }}
+            >
+              {v === 'ALL' ? 'All' : v === 'CAR' ? 'Car' : 'Bike'}
+            </button>
+          ))}
+        </div>
         <SearchBar
           value={search}
           onChange={(v) => {
@@ -286,21 +339,23 @@ export default function Invoices() {
               <div className="col-md-6"><strong>Odometer:</strong> {viewing.odometer ? `${viewing.odometer} km` : '-'}</div>
               <div className="col-md-6"><strong>Payment:</strong> {viewing.paymentMethod}</div>
             </div>
-            <table className="table table-sm">
-              <thead><tr><th>Type</th><th>Item</th><th>Qty</th><th>Rate</th><th>GST</th><th>Amount</th></tr></thead>
-              <tbody>
-                {(viewing.items || []).map((l) => (
-                  <tr key={l.invoiceItemId}>
-                    <td><span className={`badge ${l.itemType === 'SERVICE' ? 'erp-badge-service' : 'erp-badge-product'}`}>{l.itemType === 'SERVICE' ? 'Service' : 'Product'}</span></td>
-                    <td>{l.description || l.itemName}</td>
-                    <td>{l.quantity}</td>
-                    <td>{Number(l.unitPrice).toFixed(2)}</td>
-                    <td>{Number(l.taxPercentage ?? 0)}%</td>
-                    <td>{Number(l.totalAmount).toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="table-responsive">
+              <table className="table table-sm">
+                <thead><tr><th>Type</th><th>Item</th><th>Qty</th><th>Rate</th><th>GST</th><th>Amount</th></tr></thead>
+                <tbody>
+                  {(viewing.items || []).map((l) => (
+                    <tr key={l.invoiceItemId}>
+                      <td><span className={`badge ${l.itemType === 'SERVICE' ? 'erp-badge-service' : 'erp-badge-product'}`}>{l.itemType === 'SERVICE' ? 'Service' : 'Product'}</span></td>
+                      <td>{l.description || l.itemName}</td>
+                      <td>{l.quantity}</td>
+                      <td>{Number(l.unitPrice).toFixed(2)}</td>
+                      <td>{Number(l.taxPercentage ?? 0)}%</td>
+                      <td>{Number(l.totalAmount).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             <div className="d-flex justify-content-between"><span>Service Subtotal</span><span>{Number(viewing.serviceSubtotal ?? 0).toFixed(2)}</span></div>
             <div className="d-flex justify-content-between"><span>Product Subtotal</span><span>{Number(viewing.productSubtotal ?? 0).toFixed(2)}</span></div>
             <div className="d-flex justify-content-between"><span>Discount</span><span>{Number(viewing.discountAmount ?? 0).toFixed(2)}</span></div>

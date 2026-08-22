@@ -15,13 +15,24 @@ export default function Services() {
       defaultPrice: '',
       gstPercentage: '18',
       durationMinutes: '',
+      vehicleType: '',
       status: 'active',
     },
     schema: serviceMasterSchema,
+    segments: [
+      { value: 'ALL', label: 'All' },
+      { value: 'CAR', label: 'Car', predicate: (row) => !row.vehicleType || row.vehicleType === 'CAR' || row.vehicleType === 'BOTH' },
+      { value: 'BIKE', label: 'Bike', predicate: (row) => !row.vehicleType || row.vehicleType === 'BIKE' || row.vehicleType === 'BOTH' },
+    ],
     columns: [
       { key: 'serviceId', label: 'ID', sortable: true },
       { key: 'serviceCode', label: 'Code' },
       { key: 'serviceName', label: 'Service', sortable: true },
+      {
+        key: 'vehicleType',
+        label: 'Vehicle',
+        render: (row) => <span className="badge bg-secondary">{row.vehicleType || 'Both'}</span>,
+      },
       {
         key: 'defaultPrice',
         label: 'Price',
@@ -46,6 +57,16 @@ export default function Services() {
       { name: 'defaultPrice', label: 'Default Price', type: 'number', step: '0.01', required: true },
       { name: 'gstPercentage', label: 'GST %', type: 'number', step: '0.01', required: true },
       { name: 'durationMinutes', label: 'Duration (minutes)', type: 'number', placeholder: 'Optional, e.g. 60' },
+      {
+        name: 'vehicleType',
+        label: 'Vehicle Type',
+        type: 'select',
+        options: [
+          { value: '', label: 'Both (Car & Bike)' },
+          { value: 'CAR', label: 'Car only' },
+          { value: 'BIKE', label: 'Bike only' },
+        ],
+      },
       {
         name: 'status',
         label: 'Status',

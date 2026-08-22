@@ -9,6 +9,7 @@ import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import SearchBar from '../components/SearchBar';
 import Loader from '../components/Loader';
+import ErrorPage from './ErrorPage';
 
 const STATUS_BADGE = {
   RECEIVED: 'bg-secondary',
@@ -31,7 +32,9 @@ export default function JobCards() {
   const [jobCards, setJobCards] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [vehicles, setVehicles] = useState([]);
+  const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('ALL');
   const [showForm, setShowForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [customerId, setCustomerId] = useState('');
@@ -39,14 +42,27 @@ export default function JobCards() {
   const [complaint, setComplaint] = useState('');
   const [odometer, setOdometer] = useState('');
 
-  const load = () => jobCardsService.getAll().then((data) => setJobCards(Array.isArray(data) ? data : data?.content || []));
+  const load = () => {
+    setLoadError(false);
+    return jobCardsService
+      .getAll()
+      .then((data) => setJobCards(Array.isArray(data) ? data : data?.content || []))
+      .catch(() => setLoadError(true));
+  };
+
+  const loadAll = () => {
+    load();
+    Promise.all([customersService.getAll(), vehiclesService.getAll()])
+      .then(([c, v]) => {
+        setCustomers(Array.isArray(c) ? c : c?.content || []);
+        setVehicles(Array.isArray(v) ? v : v?.content || []);
+      })
+      .catch(() => setLoadError(true));
+  };
 
   useEffect(() => {
-    load();
-    Promise.all([customersService.getAll(), vehiclesService.getAll()]).then(([c, v]) => {
-      setCustomers(Array.isArray(c) ? c : c?.content || []);
-      setVehicles(Array.isArray(v) ? v : v?.content || []);
-    });
+    loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const customerVehicles = useMemo(
@@ -58,6 +74,7 @@ export default function JobCards() {
     if (!jobCards) return [];
     let list = jobCards;
     if (vehicleFilter) list = list.filter((j) => String(j.vehicleId) === String(vehicleFilter));
+    if (typeFilter !== 'ALL') list = list.filter((j) => j.vehicleCategory === typeFilter);
     if (!search) return list;
     const q = search.toLowerCase();
     return list.filter(
@@ -67,7 +84,7 @@ export default function JobCards() {
         j.registrationNumber?.toLowerCase().includes(q) ||
         j.status?.toLowerCase().includes(q)
     );
-  }, [jobCards, search, vehicleFilter]);
+  }, [jobCards, search, vehicleFilter, typeFilter]);
 
   const openCreate = () => {
     setCustomerId('');
@@ -98,6 +115,7 @@ export default function JobCards() {
     }
   };
 
+  if (loadError) return <ErrorPage message="Could not load job cards. Check your connection and try again." onRetry={loadAll} />;
   if (!jobCards) return <Loader label="Loading job cards..." />;
 
   return (
@@ -112,6 +130,18 @@ export default function JobCards() {
           )}
         </div>
         <div className="d-flex align-items-center gap-2">
+          <div className="btn-group" role="group" aria-label="Filter by vehicle type">
+            {['ALL', 'CAR', 'BIKE'].map((v) => (
+              <button
+                key={v}
+                type="button"
+                className={`btn btn-sm ${typeFilter === v ? 'btn-primary' : 'btn-outline-primary'}`}
+                onClick={() => setTypeFilter(v)}
+              >
+                {v === 'ALL' ? 'All' : v === 'CAR' ? 'Car' : 'Bike'}
+              </button>
+            ))}
+          </div>
           <SearchBar value={search} onChange={setSearch} placeholder="Search job cards..." />
           <button className="btn btn-primary d-flex align-items-center gap-1" onClick={openCreate}>
             <FiPlus /> New Job Card
@@ -131,7 +161,16 @@ export default function JobCards() {
           {
             key: 'vehicleModel',
             label: 'Vehicle',
-            render: (row) => `${row.vehicleModel || ''} · ${row.registrationNumber || ''}`,
+            render: (row) => (
+              <>
+                {row.vehicleModel || ''} · {row.registrationNumber || ''}
+                {row.vehicleCategory && (
+                  <span className={`badge ms-1 ${row.vehicleCategory === 'BIKE' ? 'bg-info' : 'bg-secondary'}`}>
+                    {row.vehicleCategory}
+                  </span>
+                )}
+              </>
+            ),
           },
           { key: 'complaint', label: 'Complaint' },
           { key: 'technicianName', label: 'Technician', render: (row) => row.technicianName || '—' },
@@ -159,8 +198,9 @@ export default function JobCards() {
         }
       >
         <div className="mb-3">
-          <label className="form-label">Customer *</label>
+          <label className="form-label" htmlFor="jc-customer">Customer *</label>
           <select
+            id="jc-customer"
             className="form-select"
             value={customerId}
             onChange={(e) => {
@@ -177,8 +217,8 @@ export default function JobCards() {
           </select>
         </div>
         <div className="mb-3">
-          <label className="form-label">Vehicle *</label>
-          <select className="form-select" value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} disabled={!customerId}>
+          <label className="form-label" htmlFor="jc-vehicle">Vehicle *</label>
+          <select id="jc-vehicle" className="form-select" value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} disabled={!customerId}>
             <option value="">{customerId ? 'Select vehicle...' : 'Select a customer first'}</option>
             {customerVehicles.map((v) => (
               <option key={v.id} value={v.id}>
@@ -188,12 +228,12 @@ export default function JobCards() {
           </select>
         </div>
         <div className="mb-3">
-          <label className="form-label">Odometer (km)</label>
-          <input type="number" min="0" className="form-control" value={odometer} onChange={(e) => setOdometer(e.target.value)} />
+          <label className="form-label" htmlFor="jc-odometer">Odometer (km)</label>
+          <input id="jc-odometer" type="number" min="0" className="form-control" value={odometer} onChange={(e) => setOdometer(e.target.value)} />
         </div>
         <div className="mb-3">
-          <label className="form-label">Customer Complaint</label>
-          <textarea className="form-control" rows={3} value={complaint} onChange={(e) => setComplaint(e.target.value)} />
+          <label className="form-label" htmlFor="jc-complaint">Customer Complaint</label>
+          <textarea id="jc-complaint" className="form-control" rows={3} value={complaint} onChange={(e) => setComplaint(e.target.value)} />
         </div>
       </Modal>
     </div>

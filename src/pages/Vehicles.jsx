@@ -4,16 +4,23 @@ import vehiclesService from '../services/vehiclesService';
 import customersService from '../services/customersService';
 import { vehicleSchema } from '../utils/validationSchemas';
 import Loader from '../components/Loader';
+import ErrorPage from './ErrorPage';
 
 export default function Vehicles() {
   const [customers, setCustomers] = useState(null);
+  const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
-    customersService.getAll().then((data) => {
-      setCustomers(Array.isArray(data) ? data : data?.content || []);
-    });
-  }, []);
+  const load = () => {
+    setLoadError(false);
+    customersService
+      .getAll()
+      .then((data) => setCustomers(Array.isArray(data) ? data : data?.content || []))
+      .catch(() => setLoadError(true));
+  };
 
+  useEffect(load, []);
+
+  if (loadError) return <ErrorPage message="Could not load customers. Check your connection and try again." onRetry={load} />;
   if (!customers) return <Loader label="Loading customers..." />;
 
   const config = {
@@ -34,6 +41,10 @@ export default function Vehicles() {
       year: '',
       chassisNumber: '',
       engineNumber: '',
+      vehicleCategory: '',
+      insuranceCompany: '',
+      insuranceExpiry: '',
+      pucExpiry: '',
       notes: '',
     },
     schema: vehicleSchema,
@@ -51,6 +62,14 @@ export default function Vehicles() {
         render: (row) => [row.make, row.vehicleModel].filter(Boolean).join(' '),
       },
       { key: 'registrationNumber', label: 'Registration No.' },
+      {
+        key: 'vehicleCategory',
+        label: 'Category',
+        render: (row) =>
+          row.vehicleCategory ? (
+            <span className={`badge ${row.vehicleCategory === 'BIKE' ? 'bg-info' : 'bg-primary'}`}>{row.vehicleCategory}</span>
+          ) : '—',
+      },
       {
         key: 'odometer',
         label: 'Odometer',
@@ -73,6 +92,15 @@ export default function Vehicles() {
       { name: 'vehicleModel', label: 'Model', required: true, placeholder: 'e.g. Creta' },
       { name: 'variant', label: 'Variant', placeholder: 'e.g. SX(O)' },
       { name: 'registrationNumber', label: 'Registration No.', required: true, placeholder: 'e.g. TN 09 AB 4521' },
+      {
+        name: 'vehicleCategory',
+        label: 'Category (Car / Bike)',
+        type: 'select',
+        options: [
+          { value: 'CAR', label: 'Car' },
+          { value: 'BIKE', label: 'Bike' },
+        ],
+      },
       { name: 'odometer', label: 'Current Odometer (km)', type: 'number' },
       {
         name: 'vehicleType',
@@ -102,6 +130,9 @@ export default function Vehicles() {
       { name: 'year', label: 'Year', type: 'number' },
       { name: 'chassisNumber', label: 'VIN / Chassis Number' },
       { name: 'engineNumber', label: 'Engine Number' },
+      { name: 'insuranceCompany', label: 'Insurance Company' },
+      { name: 'insuranceExpiry', label: 'Insurance Expiry', type: 'date' },
+      { name: 'pucExpiry', label: 'PUC Expiry', type: 'date' },
       { name: 'notes', label: 'Notes', fullWidth: true },
     ],
   };

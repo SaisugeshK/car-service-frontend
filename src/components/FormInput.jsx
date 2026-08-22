@@ -8,8 +8,10 @@ export default function FormInput({
   required = false,
   step,
   disabled = false,
+  rows,
   ...rest
 }) {
+  const Tag = type === 'textarea' ? 'textarea' : 'input';
   return (
     <div className="mb-3">
       {label && (
@@ -17,9 +19,10 @@ export default function FormInput({
           {label} {required && <span className="text-danger">*</span>}
         </label>
       )}
-      <input
+      <Tag
         id={name}
-        type={type}
+        type={type === 'textarea' ? undefined : type}
+        rows={type === 'textarea' ? (rows || 2) : undefined}
         step={step}
         placeholder={placeholder}
         disabled={disabled}

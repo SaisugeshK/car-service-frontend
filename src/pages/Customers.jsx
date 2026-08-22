@@ -28,9 +28,13 @@ export default function Customers() {
     defaultValues: {
       customerName: '',
       phone: '',
+      whatsappNumber: '',
+      alternateMobile: '',
       email: '',
       address: '',
       city: '',
+      state: '',
+      pincode: '',
       gstin: '',
       notes: '',
       status: 'active',
@@ -55,9 +59,13 @@ export default function Customers() {
     fields: [
       { name: 'customerName', label: 'Name', required: true },
       { name: 'phone', label: 'Mobile', required: true },
+      { name: 'whatsappNumber', label: 'WhatsApp Number' },
+      { name: 'alternateMobile', label: 'Alternate Mobile' },
       { name: 'email', label: 'Email', type: 'email' },
       { name: 'address', label: 'Address' },
       { name: 'city', label: 'City' },
+      { name: 'state', label: 'State' },
+      { name: 'pincode', label: 'Pincode' },
       { name: 'gstin', label: 'GSTIN' },
       { name: 'notes', label: 'Notes', fullWidth: true },
       {

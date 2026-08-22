@@ -5,6 +5,7 @@ import categoriesService from '../services/categoriesService';
 import productTaxesService from '../services/productTaxesService';
 import { productSchema } from '../utils/validationSchemas';
 import Loader from '../components/Loader';
+import ErrorPage from './ErrorPage';
 
 // GST % lives in the separate product_taxes table (shared with the invoice tax lookup), but the
 // spec wants it as a plain field on the Product form — so this wraps productsService to merge it
@@ -55,14 +56,20 @@ function scopedProductsService() {
 
 export default function Products() {
   const [categories, setCategories] = useState(null);
+  const [loadError, setLoadError] = useState(false);
   const service = useMemo(scopedProductsService, []);
 
-  useEffect(() => {
-    categoriesService.getAll().then((data) => {
-      setCategories(Array.isArray(data) ? data : data?.content || []);
-    });
-  }, []);
+  const load = () => {
+    setLoadError(false);
+    categoriesService
+      .getAll()
+      .then((data) => setCategories(Array.isArray(data) ? data : data?.content || []))
+      .catch(() => setLoadError(true));
+  };
 
+  useEffect(load, []);
+
+  if (loadError) return <ErrorPage message="Could not load categories. Check your connection and try again." onRetry={load} />;
   if (!categories) return <Loader label="Loading categories..." />;
 
   const config = {
@@ -82,14 +89,27 @@ export default function Products() {
       stockQuantity: '',
       minimumStock: '',
       unit: 'PCS',
+      vehicleType: '',
       status: 'ACTIVE',
     },
     schema: productSchema,
+    // Null/blank vehicleType = applies to both, per the model's convention — so it still shows
+    // under the Car and Bike segments, not just All.
+    segments: [
+      { value: 'ALL', label: 'All' },
+      { value: 'CAR', label: 'Car', predicate: (row) => !row.vehicleType || row.vehicleType === 'CAR' || row.vehicleType === 'BOTH' },
+      { value: 'BIKE', label: 'Bike', predicate: (row) => !row.vehicleType || row.vehicleType === 'BIKE' || row.vehicleType === 'BOTH' },
+    ],
     columns: [
       { key: 'productId', label: 'ID', sortable: true },
       { key: 'productName', label: 'Product', sortable: true },
       { key: 'sku', label: 'SKU' },
       { key: 'barcode', label: 'Barcode' },
+      {
+        key: 'vehicleType',
+        label: 'Vehicle',
+        render: (row) => <span className="badge bg-secondary">{row.vehicleType || 'Both'}</span>,
+      },
       {
         key: 'categoryId',
         label: 'Category',
@@ -154,6 +174,16 @@ export default function Products() {
       { name: 'gstPercentage', label: 'GST %', type: 'number', step: '0.01', placeholder: 'e.g. 18' },
       { name: 'stockQuantity', label: 'Opening Stock', type: 'number', required: true },
       { name: 'minimumStock', label: 'Minimum Stock', type: 'number', required: true },
+      {
+        name: 'vehicleType',
+        label: 'Vehicle Type',
+        type: 'select',
+        options: [
+          { value: '', label: 'Both (Car & Bike)' },
+          { value: 'CAR', label: 'Car only' },
+          { value: 'BIKE', label: 'Bike only' },
+        ],
+      },
       {
         name: 'status',
         label: 'Status',

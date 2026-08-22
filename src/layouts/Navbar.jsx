@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FiMenu, FiLogOut, FiBell, FiSearch, FiChevronDown, FiUser } from 'react-icons/fi';
+import { FiMenu, FiLogOut, FiChevronDown, FiUser } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { NAV_GROUPS } from './Sidebar';
+import GlobalSearch from '../components/GlobalSearch';
+import NotificationCenter from '../components/NotificationCenter';
 
 function findRouteMeta(pathname) {
   if (pathname.startsWith('/job-cards/')) return { group: 'Workshop', label: 'Job Card' };
@@ -56,16 +58,9 @@ export default function Navbar({ onToggleSidebar }) {
       </div>
 
       <div className="ms-auto d-flex align-items-center gap-2">
-        <div className="input-group erp-navbar-search d-none d-lg-flex">
-          <span className="input-group-text bg-white">
-            <FiSearch size={14} />
-          </span>
-          <input type="text" className="form-control form-control-sm" placeholder="Search..." />
-        </div>
+        <GlobalSearch />
 
-        <button className="erp-navbar-icon-btn" title="Notifications">
-          <FiBell size={16} />
-        </button>
+        <NotificationCenter />
 
         <div className="position-relative" ref={menuRef}>
           <button

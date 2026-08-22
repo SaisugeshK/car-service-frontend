@@ -4,17 +4,23 @@ import salesService from '../services/salesService';
 import customersService from '../services/customersService';
 import { saleSchema } from '../utils/validationSchemas';
 import Loader from '../components/Loader';
+import ErrorPage from './ErrorPage';
 
 export default function Sales() {
   const [customers, setCustomers] = useState(null);
+  const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
-    customersService.getAll().then((data) => {
-      const list = Array.isArray(data) ? data : data?.content || [];
-      setCustomers(list);
-    });
-  }, []);
+  const load = () => {
+    setLoadError(false);
+    customersService
+      .getAll()
+      .then((data) => setCustomers(Array.isArray(data) ? data : data?.content || []))
+      .catch(() => setLoadError(true));
+  };
 
+  useEffect(load, []);
+
+  if (loadError) return <ErrorPage message="Could not load customers. Check your connection and try again." onRetry={load} />;
   if (!customers) return <Loader label="Loading customers..." />;
 
   const config = {

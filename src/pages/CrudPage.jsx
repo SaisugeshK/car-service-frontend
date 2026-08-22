@@ -10,6 +10,7 @@ import SearchBar from '../components/SearchBar';
 import Pagination from '../components/Pagination';
 import FormInput from '../components/FormInput';
 import FormSelect from '../components/FormSelect';
+import ErrorPage from './ErrorPage';
 
 const PAGE_SIZE = 8;
 
@@ -50,7 +51,7 @@ export default function CrudPage({ config }) {
     onRowClick,
   } = config;
 
-  const { items, isLoading, isSaving, load, create, update, remove } = useCrud(service, {
+  const { items, isLoading, isSaving, error, load, create, update, remove } = useCrud(service, {
     entityName,
   });
 
@@ -195,25 +196,34 @@ export default function CrudPage({ config }) {
         </div>
       </div>
 
-      <DataTable
-        columns={columns}
-        rows={pagedRows}
-        onRowClick={onRowClick}
-        isLoading={isLoading}
-        onEdit={openEdit}
-        onDelete={setDeletingRow}
-        keyField={keyField}
-        emptyTitle={`No ${title.toLowerCase()} yet`}
-        emptyMessage={`Click "Add ${entityName}" to create your first record.`}
-      />
+      {error && !isLoading ? (
+        // A failed fetch (network/backend/timeout) must never look like "no records" — that's
+        // an honest empty state, this isn't. items stays [] either way, so without this check
+        // DataTable would silently render "click Add to create your first record" on a 500.
+        <ErrorPage message={`Could not load ${title.toLowerCase()}. Check your connection and try again.`} onRetry={load} />
+      ) : (
+        <>
+          <DataTable
+            columns={columns}
+            rows={pagedRows}
+            onRowClick={onRowClick}
+            isLoading={isLoading}
+            onEdit={openEdit}
+            onDelete={setDeletingRow}
+            keyField={keyField}
+            emptyTitle={`No ${title.toLowerCase()} yet`}
+            emptyMessage={`Click "Add ${entityName}" to create your first record.`}
+          />
 
-      <Pagination
-        page={page}
-        totalPages={totalPages}
-        onPageChange={setPage}
-        totalItems={filtered.length}
-        pageSize={PAGE_SIZE}
-      />
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            totalItems={filtered.length}
+            pageSize={PAGE_SIZE}
+          />
+        </>
+      )}
 
       <Modal
         show={showForm}
@@ -254,6 +264,7 @@ export default function CrudPage({ config }) {
                     name={f.name}
                     type={f.type || 'text'}
                     step={f.step}
+                    min={f.min}
                     register={register}
                     error={errors[f.name]}
                     required={f.required}

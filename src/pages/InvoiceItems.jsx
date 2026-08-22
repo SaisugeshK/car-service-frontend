@@ -5,24 +5,30 @@ import invoicesService from '../services/invoicesService';
 import serviceMasterService from '../services/serviceMasterService';
 import productsService from '../services/productsService';
 import Loader from '../components/Loader';
+import ErrorPage from './ErrorPage';
 
 // Manual line-item corrections for an existing invoice — normal billing happens entirely
 // through Point of Sale, which creates these rows automatically as part of "Complete Bill".
 export default function InvoiceItems() {
   const [refs, setRefs] = useState(null);
+  const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
-    Promise.all([invoicesService.getAll(), serviceMasterService.getAll(), productsService.getAll({ itemType: 'PRODUCT' })]).then(
-      ([invoices, services, products]) => {
+  const load = () => {
+    setLoadError(false);
+    Promise.all([invoicesService.getAll(), serviceMasterService.getAll(), productsService.getAll({ itemType: 'PRODUCT' })])
+      .then(([invoices, services, products]) => {
         setRefs({
           invoices: Array.isArray(invoices) ? invoices : invoices?.content || [],
           services: Array.isArray(services) ? services : services?.content || [],
           products: Array.isArray(products) ? products : products?.content || [],
         });
-      }
-    );
-  }, []);
+      })
+      .catch(() => setLoadError(true));
+  };
 
+  useEffect(load, []);
+
+  if (loadError) return <ErrorPage message="Could not load references. Check your connection and try again." onRetry={load} />;
   if (!refs) return <Loader label="Loading references..." />;
   const { invoices, services, products } = refs;
 

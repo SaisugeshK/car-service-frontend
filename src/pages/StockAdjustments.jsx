@@ -6,6 +6,7 @@ import stockMovementsService from '../services/stockMovementsService';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import Loader from '../components/Loader';
+import ErrorPage from './ErrorPage';
 
 const asList = (data) => (Array.isArray(data) ? data : data?.content || []);
 
@@ -20,17 +21,24 @@ export default function StockAdjustments() {
   const [quantity, setQuantity] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const loadMovements = () =>
-    stockMovementsService.getAll().then((data) => {
-      const list = asList(data).filter((m) => (m.movementType || '').startsWith('ADJUSTMENT'));
-      setMovements(list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
-    });
+    stockMovementsService
+      .getAll()
+      .then((data) => {
+        const list = asList(data).filter((m) => (m.movementType || '').startsWith('ADJUSTMENT'));
+        setMovements(list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+      })
+      .catch(() => setLoadError(true));
 
-  useEffect(() => {
-    productsService.getAll({ itemType: 'PRODUCT' }).then((data) => setProducts(asList(data)));
+  const load = () => {
+    setLoadError(false);
+    productsService.getAll({ itemType: 'PRODUCT' }).then((data) => setProducts(asList(data))).catch(() => setLoadError(true));
     loadMovements();
-  }, []);
+  };
+
+  useEffect(load, []);
 
   const openCreate = () => {
     setProductId('');
@@ -62,6 +70,7 @@ export default function StockAdjustments() {
     }
   };
 
+  if (loadError) return <ErrorPage message="Could not load stock adjustments. Check your connection and try again." onRetry={load} />;
   if (!products || !movements) return <Loader label="Loading stock adjustments..." />;
 
   return (
