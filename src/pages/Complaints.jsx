@@ -38,7 +38,7 @@ export default function Complaints() {
     jobCardsService.getAll().then((data) => setJobCards(asList(data)));
     // GET /api/users is SUPER_ADMIN-only on the backend — non-critical display data here
     // (assignee name lookup), so fail quietly for a MANAGER rather than an unhandled rejection.
-    usersService.getAll().then((data) => setUsers(asList(data))).catch(() => setUsers([]));
+    usersService.getAll(undefined, { skipErrorToast: true }).then((data) => setUsers(asList(data))).catch(() => setUsers([]));
   };
 
   useEffect(load, []);

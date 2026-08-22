@@ -26,7 +26,7 @@ export default function Payments() {
     // GET /api/users is SUPER_ADMIN-only on the backend — a MANAGER session gets a 403 here.
     // Non-critical for this page (only used to show a "Received By" display name), so fail
     // quietly rather than leave an unhandled rejection in the console.
-    usersService.getAll().then((data) => {
+    usersService.getAll(undefined, { skipErrorToast: true }).then((data) => {
       setUsers(Array.isArray(data) ? data : data?.content || []);
     }).catch(() => setUsers([]));
   };

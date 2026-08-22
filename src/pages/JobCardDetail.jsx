@@ -878,9 +878,14 @@ function EstimateTab({ jobCard, onSaved }) {
                 {wc.label} Work {rows.length > 0 && <span className="text-secondary fw-normal">({groupTotal.toFixed(2)})</span>}
               </div>
               <div className="table-responsive">
-                <table className="table mb-0">
+                {/* table-layout: fixed + explicit widths on the narrow numeric columns — without
+                    it, the browser's default auto-layout lets a long, wrapping product/service
+                    name (e.g. "Engine Oil 5W-30 Synthetic 1L") steal space from the Qty column,
+                    shrinking its <input> down to ~26px — narrow enough that the digit inside is
+                    clipped and invisible even though the value is set correctly underneath. */}
+                <table className="table mb-0" style={{ tableLayout: 'fixed', width: '100%' }}>
                   {rows.length > 0 && (
-                    <thead><tr><th>Type</th><th>Item</th><th>Qty</th><th>Rate</th><th>Discount</th><th>Amount</th><th /></tr></thead>
+                    <thead><tr><th style={{ width: 90 }}>Type</th><th>Item</th><th style={{ width: 80 }}>Qty</th><th style={{ width: 90 }}>Rate</th><th style={{ width: 100 }}>Discount</th><th style={{ width: 100 }}>Amount</th><th style={{ width: 48 }} /></tr></thead>
                   )}
                   <tbody>
                     {rows.length === 0 && <tr><td className="text-center text-muted py-3">No {wc.label.toLowerCase()} lines yet.</td></tr>}
@@ -1099,7 +1104,7 @@ function TechnicianTab({ jobCard, onSaved }) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    usersService.getAll()
+    usersService.getAll(undefined, { skipErrorToast: true })
       .then((data) => setUsers(asList(data)))
       .catch(() => setStaffListUnavailable(true));
   }, []);
@@ -1297,8 +1302,10 @@ function AdditionalWorkTab({ jobCard, onSaved }) {
 
         <div className="erp-card p-0 mb-3">
           <div className="table-responsive">
-            <table className="table mb-0">
-              <thead><tr><th>Type</th><th>Item</th><th>Qty</th><th>Rate</th><th>Discount</th><th>Amount</th><th /></tr></thead>
+            {/* table-layout: fixed — see the matching comment on the Estimate tab's cart table;
+                same fix for the same "Qty input renders blank next to a long product name" bug. */}
+            <table className="table mb-0" style={{ tableLayout: 'fixed', width: '100%' }}>
+              <thead><tr><th style={{ width: 90 }}>Type</th><th>Item</th><th style={{ width: 80 }}>Qty</th><th style={{ width: 90 }}>Rate</th><th style={{ width: 100 }}>Discount</th><th style={{ width: 100 }}>Amount</th><th style={{ width: 48 }} /></tr></thead>
               <tbody>
                 {cart.length === 0 && <tr><td colSpan={7} className="text-center text-muted py-3">Nothing added yet — search above.</td></tr>}
                 {cart.map((l, idx) => (
@@ -1454,6 +1461,7 @@ function InvoiceTab({ jobCard, onSaved }) {
   const [paidAmount, setPaidAmount] = useState(0);
   const [generating, setGenerating] = useState(false);
   const [estimates, setEstimates] = useState(null);
+  const [additionalWork, setAdditionalWork] = useState(null);
   const [feeAmount, setFeeAmount] = useState(500);
 
   useEffect(() => {
@@ -1463,12 +1471,24 @@ function InvoiceTab({ jobCard, onSaved }) {
       setLoading(false);
     }
     estimatesService.getByJobCard(jobCard.jobCardId).then((data) => setEstimates(asList(data)));
+    additionalWorkService.getByJobCard(jobCard.jobCardId).then((data) => setAdditionalWork(asList(data)));
   }, [jobCard.invoiceId, jobCard.jobCardId]);
 
   const generateInvoice = async () => {
+    const amount = Number(paidAmount || 0);
+    if (!Number.isFinite(amount) || amount < 0) {
+      toast.error('Amount Received must be a valid number, 0 or more');
+      return;
+    }
     setGenerating(true);
     try {
-      const inv = await jobCardsService.generateInvoice(jobCard.jobCardId, { paymentMethod, paidAmount: Number(paidAmount || 0) });
+      // Never submit more than what's actually owed — anything typed above the total is change
+      // handed back at the counter, not revenue applied to the invoice. Submitting the raw
+      // over-amount is exactly what used to let paidAmount exceed grandTotal and drive
+      // balanceAmount negative (see InvoiceServiceImpl's overpayment guard, which would now
+      // reject it anyway); capping here keeps the number that hits the API always billing-safe.
+      const amountToApply = Math.min(amount, finalTotal);
+      const inv = await jobCardsService.generateInvoice(jobCard.jobCardId, { paymentMethod, paidAmount: amountToApply });
       toast.success(`Invoice ${inv.invoiceNumber} generated`);
       setInvoice(inv);
       onSaved();
@@ -1497,18 +1517,40 @@ function InvoiceTab({ jobCard, onSaved }) {
     }
   };
 
-  if (loading || !estimates) return <Loader label="Loading invoice..." />;
+  if (loading || !estimates || !additionalWork) return <Loader label="Loading invoice..." />;
 
   const hasApproved = estimates.some((e) => e.status === 'APPROVED');
-  const hasUndecided = estimates.some((e) => e.status === 'PENDING' || e.status === 'CHANGES_REQUESTED');
+  // An approved estimate takes priority over any other stray PENDING/CHANGES_REQUESTED one on
+  // this job card — e.g. an abandoned revision left at CHANGES_REQUESTED after staff started a
+  // fresh estimate instead of following through on it. The backend already resolves this the
+  // same way (JobCardServiceImpl.generateInvoice picks the most-recently-created APPROVED
+  // estimate, ignoring stale undecided ones); this used to block the button even when there was
+  // a perfectly valid approved estimate to invoice.
+  const hasUndecided = !hasApproved && estimates.some((e) => e.status === 'PENDING' || e.status === 'CHANGES_REQUESTED');
   const hasRejected = estimates.some((e) => e.status === 'REJECTED');
   // Service was declined: no estimate is approved or still awaiting a decision, but at least
   // one was rejected — the only thing chargeable is the inspection itself, never the declined work.
   const rejectedOnly = !hasApproved && !hasUndecided && hasRejected;
 
+  // Same estimate the backend will actually bill from — JobCardServiceImpl.generateInvoice picks
+  // the most-recently-created APPROVED estimate, so the preview here must pick the same one.
+  // Everything below is built from data already loaded (Estimate + Additional Work tabs' own
+  // records) — no separate total is computed or stored, just previewed ahead of generation.
+  const approvedEstimate = estimates
+    .filter((e) => e.status === 'APPROVED')
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null;
+  const approvedEstimateTotal = Number(approvedEstimate?.grandTotal || 0);
+  const approvedAdditionalWork = additionalWork.filter((r) => r.status === 'APPROVED');
+  const approvedAdditionalWorkTotal = approvedAdditionalWork.reduce((sum, r) => sum + Number(r.grandTotal || 0), 0);
+  const finalTotal = approvedEstimateTotal + approvedAdditionalWorkTotal;
+
+  const receivedAmount = Number(paidAmount || 0);
+  const receivedIsValid = paidAmount !== '' && Number.isFinite(receivedAmount) && receivedAmount >= 0;
+  const paymentDiff = receivedIsValid ? Math.round((receivedAmount - finalTotal) * 100) / 100 : 0;
+
   if (!invoice) {
     return (
-      <div className="erp-card p-3" style={{ maxWidth: 420 }}>
+      <div className="erp-card p-3" style={{ maxWidth: 480 }}>
         {rejectedOnly ? (
           <div className="alert alert-warning small mb-3">
             The customer rejected the estimated work — this invoice can only include the
@@ -1521,6 +1563,27 @@ function InvoiceTab({ jobCard, onSaved }) {
               : 'No invoice yet — generated from the latest approved estimate.'}
           </p>
         )}
+
+        {!rejectedOnly && hasApproved && (
+          <div className="erp-card p-3 mb-3 bg-light">
+            <h6 className="text-secondary text-uppercase small mb-2" style={{ letterSpacing: '0.04em' }}>Invoice Summary</h6>
+            <div className="d-flex justify-content-between">
+              <span>Approved Estimate</span>
+              <span>{approvedEstimateTotal.toFixed(2)}</span>
+            </div>
+            <div className="d-flex justify-content-between">
+              <span>Additional Work{approvedAdditionalWork.length > 1 ? ` (${approvedAdditionalWork.length})` : ''}</span>
+              <span>{approvedAdditionalWorkTotal.toFixed(2)}</span>
+            </div>
+            <hr className="my-2" />
+            <div className="d-flex justify-content-between align-items-center">
+              <strong>TOTAL AMOUNT DUE</strong>
+              <strong className="fs-5 text-primary">{finalTotal.toFixed(2)}</strong>
+            </div>
+            <div className="small text-secondary mt-1">Customer should pay: <strong>{finalTotal.toFixed(2)}</strong></div>
+          </div>
+        )}
+
         <div className="mb-3">
           <label className="form-label">Payment Method</label>
           <select className="form-select" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
@@ -1533,16 +1596,26 @@ function InvoiceTab({ jobCard, onSaved }) {
             <input type="number" min="0" className="form-control" value={feeAmount} onChange={(e) => setFeeAmount(e.target.value)} />
           </div>
         )}
-        <div className="mb-3">
-          <label className="form-label">Paid Amount</label>
+        <div className="mb-2">
+          <label className="form-label">Amount Received from Customer</label>
           <input type="number" min="0" className="form-control" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} />
+          <div className="form-text">Enter the amount actually received from the customer.</div>
         </div>
+
+        {!rejectedOnly && hasApproved && receivedIsValid && paidAmount !== '' && (
+          <div className={`small mb-3 fw-semibold ${paymentDiff === 0 ? 'text-success' : paymentDiff < 0 ? 'text-danger' : 'text-info'}`}>
+            {paymentDiff === 0 && <>✓ PAID IN FULL — Balance Due: 0.00</>}
+            {paymentDiff < 0 && <>⚠ BALANCE DUE: {Math.abs(paymentDiff).toFixed(2)}</>}
+            {paymentDiff > 0 && <>⚠ CHANGE TO RETURN: {paymentDiff.toFixed(2)} (only {finalTotal.toFixed(2)} will be recorded as paid)</>}
+          </div>
+        )}
+
         {rejectedOnly ? (
           <button className="btn btn-warning" onClick={generateInspectionFeeInvoice} disabled={generating}>
             {generating ? 'Generating...' : 'Generate Inspection Fee Invoice'}
           </button>
         ) : (
-          <button className="btn btn-primary" onClick={generateInvoice} disabled={generating || hasUndecided}>
+          <button className="btn btn-primary" onClick={generateInvoice} disabled={generating || hasUndecided || !receivedIsValid}>
             {generating ? 'Generating...' : 'Generate Invoice'}
           </button>
         )}
@@ -1603,7 +1676,7 @@ function DeliveryChecklist({ jobCard, invoice, estimates, onDelivered }) {
 
   useEffect(() => {
     qualityChecksService.getByJobCard(jobCard.jobCardId).then((data) => setQualityChecks(asList(data)));
-    usersService.getAll()
+    usersService.getAll(undefined, { skipErrorToast: true })
       .then((data) => setUsers(asList(data)))
       .catch(() => setStaffListUnavailable(true));
   }, [jobCard.jobCardId]);
