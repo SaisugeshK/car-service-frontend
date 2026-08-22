@@ -30,7 +30,12 @@ export default function Login() {
       await login(values);
       navigate(location.state?.from?.pathname || '/', { replace: true });
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Invalid email or password');
+      // The global axios response interceptor already shows a toast for the failed request
+      // (400/401/etc.) — a second one here would double up. Only cover the one case the
+      // interceptor can't: a 2xx response that's missing an access token (see AuthContext.login).
+      if (!err?.response) {
+        toast.error(err?.message || 'Invalid email or password');
+      }
     } finally {
       setSubmitting(false);
     }

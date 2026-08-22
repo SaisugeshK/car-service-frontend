@@ -15,6 +15,7 @@ import settingsService from '../services/settingsService';
 import { calculateInvoiceTotals } from '../utils/invoiceCalculations';
 import { downloadInvoicePdf } from '../utils/invoicePdf';
 import Loader from '../components/Loader';
+import ErrorPage from './ErrorPage';
 import Modal from '../components/Modal';
 
 const emptyVehicleForm = () => ({
@@ -36,6 +37,7 @@ export default function PointOfSale() {
   const [products, setProducts] = useState(null);
   const [productTaxes, setProductTaxes] = useState([]);
   const [company, setCompany] = useState({ name: 'AutoCare ERP', address: '', phone: '', email: '', gstin: '' });
+  const [loadError, setLoadError] = useState(false);
 
   const [customerId, setCustomerId] = useState('');
   const [vehicleId, setVehicleId] = useState('');
@@ -59,7 +61,8 @@ export default function PointOfSale() {
 
   const scanInputRef = useRef(null);
 
-  useEffect(() => {
+  const loadAll = () => {
+    setLoadError(false);
     Promise.all([
       customersService.getAll(),
       vehiclesService.getAll(),
@@ -83,8 +86,10 @@ export default function PointOfSale() {
         email: get('company_email', ''),
         gstin: get('company_gstin', ''),
       });
-    });
-  }, []);
+    }).catch(() => setLoadError(true));
+  };
+
+  useEffect(loadAll, []);
 
   useEffect(() => {
     scanInputRef.current?.focus();
@@ -366,6 +371,7 @@ export default function PointOfSale() {
     }
   };
 
+  if (loadError) return <ErrorPage message="Could not load POS. Check your connection and try again." onRetry={loadAll} />;
   if (!customers || !vehicles || !services || !products) return <Loader label="Loading POS..." />;
 
   return (
@@ -806,40 +812,44 @@ export default function PointOfSale() {
             {(receipt.items || []).filter((l) => l.itemType === 'SERVICE').length > 0 && (
               <>
                 <h6 className="small text-uppercase text-muted">Services</h6>
-                <table className="table table-sm">
-                  <thead><tr><th>Description</th><th>Qty</th><th>Rate</th><th>GST</th><th>Amount</th></tr></thead>
-                  <tbody>
-                    {(receipt.items || []).filter((l) => l.itemType === 'SERVICE').map((l) => (
-                      <tr key={l.invoiceItemId}>
-                        <td>{l.description || l.itemName}</td>
-                        <td>{l.quantity}</td>
-                        <td>{Number(l.unitPrice).toFixed(2)}</td>
-                        <td>{Number(l.taxPercentage ?? 0)}%</td>
-                        <td>{Number(l.totalAmount).toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="table-responsive">
+                  <table className="table table-sm">
+                    <thead><tr><th>Description</th><th>Qty</th><th>Rate</th><th>GST</th><th>Amount</th></tr></thead>
+                    <tbody>
+                      {(receipt.items || []).filter((l) => l.itemType === 'SERVICE').map((l) => (
+                        <tr key={l.invoiceItemId}>
+                          <td>{l.description || l.itemName}</td>
+                          <td>{l.quantity}</td>
+                          <td>{Number(l.unitPrice).toFixed(2)}</td>
+                          <td>{Number(l.taxPercentage ?? 0)}%</td>
+                          <td>{Number(l.totalAmount).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </>
             )}
 
             {(receipt.items || []).filter((l) => l.itemType !== 'SERVICE').length > 0 && (
               <>
                 <h6 className="small text-uppercase text-muted">Products / Spare Parts</h6>
-                <table className="table table-sm">
-                  <thead><tr><th>Description</th><th>Qty</th><th>Rate</th><th>GST</th><th>Amount</th></tr></thead>
-                  <tbody>
-                    {(receipt.items || []).filter((l) => l.itemType !== 'SERVICE').map((l) => (
-                      <tr key={l.invoiceItemId}>
-                        <td>{l.description || l.itemName}</td>
-                        <td>{l.quantity}</td>
-                        <td>{Number(l.unitPrice).toFixed(2)}</td>
-                        <td>{Number(l.taxPercentage ?? 0)}%</td>
-                        <td>{Number(l.totalAmount).toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="table-responsive">
+                  <table className="table table-sm">
+                    <thead><tr><th>Description</th><th>Qty</th><th>Rate</th><th>GST</th><th>Amount</th></tr></thead>
+                    <tbody>
+                      {(receipt.items || []).filter((l) => l.itemType !== 'SERVICE').map((l) => (
+                        <tr key={l.invoiceItemId}>
+                          <td>{l.description || l.itemName}</td>
+                          <td>{l.quantity}</td>
+                          <td>{Number(l.unitPrice).toFixed(2)}</td>
+                          <td>{Number(l.taxPercentage ?? 0)}%</td>
+                          <td>{Number(l.totalAmount).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </>
             )}
 

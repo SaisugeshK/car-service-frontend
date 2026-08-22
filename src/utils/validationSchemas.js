@@ -52,9 +52,25 @@ export const categorySchema = yup.object({
 export const customerSchema = yup.object({
   customerName: yup.string().required('Customer name is required'),
   phone: yup.string().matches(phoneRegex, 'Enter a valid phone number').required('Phone is required'),
+  whatsappNumber: yup
+    .string()
+    .matches(phoneRegex, 'Enter a valid phone number')
+    .nullable()
+    .transform((v) => (v === '' ? null : v)),
+  alternateMobile: yup
+    .string()
+    .matches(phoneRegex, 'Enter a valid phone number')
+    .nullable()
+    .transform((v) => (v === '' ? null : v)),
   email: yup.string().email('Enter a valid email').nullable(),
   address: yup.string().nullable(),
   city: yup.string().nullable(),
+  state: yup.string().nullable(),
+  pincode: yup
+    .string()
+    .matches(/^[0-9]{4,10}$/, 'Enter a valid pincode')
+    .nullable()
+    .transform((v) => (v === '' ? null : v)),
   gstin: yup.string().nullable(),
   notes: yup.string().nullable(),
   status: yup.string().required('Status is required'),
@@ -99,6 +115,7 @@ export const productSchema = yup.object({
     .min(0, 'Cannot be negative')
     .required('Minimum stock is required'),
   unit: yup.string().required('Unit is required'),
+  vehicleType: yup.string().nullable(),
   status: yup.string().required('Status is required'),
 });
 
@@ -115,6 +132,10 @@ export const vehicleSchema = yup.object({
   year: yup.number().typeError('Enter a valid year').nullable(),
   chassisNumber: yup.string().nullable(),
   engineNumber: yup.string().nullable(),
+  vehicleCategory: yup.string().nullable(),
+  insuranceCompany: yup.string().nullable(),
+  insuranceExpiry: yup.string().nullable(),
+  pucExpiry: yup.string().nullable(),
   notes: yup.string().nullable(),
 });
 
@@ -130,6 +151,7 @@ export const serviceMasterSchema = yup.object({
     .min(0)
     .nullable()
     .transform((v) => (Number.isNaN(v) ? null : v)),
+  vehicleType: yup.string().nullable(),
   status: yup.string().required('Status is required'),
 });
 
@@ -177,6 +199,8 @@ export const paymentSchema = yup.object({
   paymentMethod: yup.string().required('Payment method is required'),
   transactionReference: yup.string().nullable(),
   amount: yup.number().typeError('Enter a valid amount').positive('Must be positive').required('Amount is required'),
+  receivedByUserId: yup.number().typeError('Select who received this payment').nullable(),
+  notes: yup.string().nullable(),
 });
 
 export const holdInvoiceSchema = yup.object({
@@ -285,10 +309,51 @@ export const appointmentSchema = yup.object({
 
 export const serviceReminderSchema = yup.object({
   vehicleId: yup.number().typeError('Vehicle is required').required('Vehicle is required'),
+  reminderType: yup.string().nullable(),
   dueDate: yup.string().nullable(),
   dueOdometer: yup.number().typeError('Enter a valid odometer reading').min(0).nullable(),
   notes: yup.string().nullable(),
   status: yup.string().nullable(),
+});
+
+export const reviewSchema = yup.object({
+  customerId: yup.number().typeError('Customer is required').required('Customer is required'),
+  vehicleId: yup.number().typeError('Enter a valid vehicle').nullable(),
+  jobCardId: yup.number().typeError('Enter a valid job card').nullable(),
+  invoiceId: yup.number().typeError('Enter a valid invoice').nullable(),
+  rating: yup.number().typeError('Overall rating is required').min(1).max(5).required('Overall rating is required'),
+  serviceQualityRating: yup.number().typeError('Enter 1-5').min(1).max(5).nullable().transform((v) => (Number.isNaN(v) ? null : v)),
+  staffBehaviorRating: yup.number().typeError('Enter 1-5').min(1).max(5).nullable().transform((v) => (Number.isNaN(v) ? null : v)),
+  serviceTimeRating: yup.number().typeError('Enter 1-5').min(1).max(5).nullable().transform((v) => (Number.isNaN(v) ? null : v)),
+  priceSatisfactionRating: yup.number().typeError('Enter 1-5').min(1).max(5).nullable().transform((v) => (Number.isNaN(v) ? null : v)),
+  comment: yup.string().nullable(),
+});
+
+export const offerSchema = yup.object({
+  offerName: yup.string().required('Offer name is required'),
+  description: yup.string().nullable(),
+  discountType: yup.string().required('Discount type is required'),
+  discountValue: yup.number().typeError('Enter a valid amount').positive('Must be positive').required('Discount value is required'),
+  startDate: yup.string().nullable(),
+  endDate: yup.string().nullable(),
+  vehicleType: yup.string().nullable(),
+  categoryId: yup.number().typeError('Enter a valid category').nullable(),
+  minimumBillAmount: yup.number().typeError('Enter a valid amount').min(0).nullable().transform((v) => (Number.isNaN(v) ? null : v)),
+  terms: yup.string().nullable(),
+  status: yup.string().required('Status is required'),
+});
+
+export const complaintSchema = yup.object({
+  customerId: yup.number().typeError('Customer is required').required('Customer is required'),
+  vehicleId: yup.number().typeError('Enter a valid vehicle').nullable(),
+  jobCardId: yup.number().typeError('Enter a valid job card').nullable(),
+  type: yup.string().nullable(),
+  description: yup.string().required('Description is required'),
+  priority: yup.string().nullable(),
+  assignedToUserId: yup.number().typeError('Enter a valid staff member').nullable(),
+  status: yup.string().nullable(),
+  resolution: yup.string().nullable(),
+  resolutionDate: yup.string().nullable(),
 });
 
 export const followUpSchema = yup.object({

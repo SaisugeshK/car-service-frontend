@@ -4,17 +4,23 @@ import productBarcodesService from '../services/productBarcodesService';
 import productsService from '../services/productsService';
 import { productBarcodeSchema } from '../utils/validationSchemas';
 import Loader from '../components/Loader';
+import ErrorPage from './ErrorPage';
 
 export default function Barcodes() {
   const [products, setProducts] = useState(null);
+  const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
-    productsService.getAll({ itemType: 'PRODUCT' }).then((data) => {
-      const list = Array.isArray(data) ? data : data?.content || [];
-      setProducts(list);
-    });
-  }, []);
+  const load = () => {
+    setLoadError(false);
+    productsService
+      .getAll({ itemType: 'PRODUCT' })
+      .then((data) => setProducts(Array.isArray(data) ? data : data?.content || []))
+      .catch(() => setLoadError(true));
+  };
 
+  useEffect(load, []);
+
+  if (loadError) return <ErrorPage message="Could not load products. Check your connection and try again." onRetry={load} />;
   if (!products) return <Loader label="Loading products..." />;
 
   const config = {

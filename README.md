@@ -1,4 +1,4 @@
-# Supermarket ERP — React + Vite Frontend
+#  ERP — React + Vite Frontend
 
 A production-style React 19 + Vite frontend wired directly to your existing
 Spring Boot REST API (from `erp_supermarket_collection` Postman export). No

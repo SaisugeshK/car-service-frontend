@@ -5,21 +5,29 @@ import customersService from '../services/customersService';
 import vehiclesService from '../services/vehiclesService';
 import { followUpSchema } from '../utils/validationSchemas';
 import Loader from '../components/Loader';
+import ErrorPage from './ErrorPage';
 
 const STATUS_OPTIONS = ['PENDING', 'CONTACTED', 'BOOKED', 'COMPLETED', 'NO_RESPONSE'];
 
 export default function Followups() {
   const [refs, setRefs] = useState(null);
+  const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
-    Promise.all([customersService.getAll(), vehiclesService.getAll()]).then(([c, v]) => {
-      setRefs({
-        customers: Array.isArray(c) ? c : c?.content || [],
-        vehicles: Array.isArray(v) ? v : v?.content || [],
-      });
-    });
-  }, []);
+  const load = () => {
+    setLoadError(false);
+    Promise.all([customersService.getAll(), vehiclesService.getAll()])
+      .then(([c, v]) => {
+        setRefs({
+          customers: Array.isArray(c) ? c : c?.content || [],
+          vehicles: Array.isArray(v) ? v : v?.content || [],
+        });
+      })
+      .catch(() => setLoadError(true));
+  };
 
+  useEffect(load, []);
+
+  if (loadError) return <ErrorPage message="Could not load follow-ups. Check your connection and try again." onRetry={load} />;
   if (!refs) return <Loader label="Loading references..." />;
   const { customers, vehicles } = refs;
 

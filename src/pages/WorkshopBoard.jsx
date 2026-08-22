@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import jobCardsService from '../services/jobCardsService';
 import Loader from '../components/Loader';
+import ErrorPage from './ErrorPage';
 
 const COLUMNS = [
   'RECEIVED', 'INSPECTION', 'WAITING_APPROVAL', 'APPROVED', 'IN_PROGRESS',
@@ -16,20 +17,45 @@ const COLUMN_LABEL = {
 
 export default function WorkshopBoard() {
   const [jobCards, setJobCards] = useState(null);
+  const [typeFilter, setTypeFilter] = useState('ALL');
+  const [loadError, setLoadError] = useState(false);
   const navigate = useNavigate();
 
+  const load = () => {
+    setLoadError(false);
+    jobCardsService
+      .getAll()
+      .then((data) => setJobCards(Array.isArray(data) ? data : data?.content || []))
+      .catch(() => setLoadError(true));
+  };
+
   useEffect(() => {
-    jobCardsService.getAll().then((data) => setJobCards(Array.isArray(data) ? data : data?.content || []));
+    load();
   }, []);
 
+  if (loadError) return <ErrorPage message="Could not load the workshop board. Check your connection and try again." onRetry={load} />;
   if (!jobCards) return <Loader label="Loading workshop board..." />;
 
-  const active = jobCards.filter((j) => j.status !== 'CANCELLED');
+  const active = jobCards.filter(
+    (j) => j.status !== 'CANCELLED' && (typeFilter === 'ALL' || j.vehicleCategory === typeFilter)
+  );
 
   return (
     <div>
       <div className="erp-page-header">
         <h1 className="erp-page-title">Workshop Board</h1>
+        <div className="btn-group" role="group" aria-label="Filter by vehicle type">
+          {['ALL', 'CAR', 'BIKE'].map((v) => (
+            <button
+              key={v}
+              type="button"
+              className={`btn btn-sm ${typeFilter === v ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => setTypeFilter(v)}
+            >
+              {v === 'ALL' ? 'All' : v === 'CAR' ? 'Car' : 'Bike'}
+            </button>
+          ))}
+        </div>
       </div>
       <div className="d-flex gap-3" style={{ overflowX: 'auto', paddingBottom: 8 }}>
         {COLUMNS.map((status) => {
@@ -48,7 +74,14 @@ export default function WorkshopBoard() {
                     style={{ cursor: 'pointer' }}
                     onClick={() => navigate(`/job-cards/${jc.jobCardId}`)}
                   >
-                    <div className="fw-semibold small">{jc.registrationNumber || '—'}</div>
+                    <div className="fw-semibold small">
+                      {jc.registrationNumber || '—'}
+                      {jc.vehicleCategory && (
+                        <span className={`badge ms-1 ${jc.vehicleCategory === 'BIKE' ? 'bg-info' : 'bg-secondary'}`}>
+                          {jc.vehicleCategory}
+                        </span>
+                      )}
+                    </div>
                     <div className="text-secondary" style={{ fontSize: '0.78rem' }}>{jc.vehicleModel}</div>
                     <div style={{ fontSize: '0.72rem' }} className="text-secondary">{jc.jobCardNumber}</div>
                     {jc.complaint && <div className="small mt-1" style={{ fontSize: '0.78rem' }}>{jc.complaint}</div>}

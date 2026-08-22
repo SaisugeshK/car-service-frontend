@@ -6,6 +6,7 @@ import vehiclesService from '../services/vehiclesService';
 const emptyForm = () => ({
   make: '', vehicleModel: '', variant: '', registrationNumber: '', odometer: '',
   vehicleType: '', fuelType: '', color: '', year: '', chassisNumber: '', engineNumber: '', notes: '',
+  vehicleCategory: '', insuranceCompany: '', insuranceExpiry: '', pucExpiry: '',
 });
 
 // Vehicle-only — the customer is already known, so we never ask for it again (spec: existing
@@ -40,6 +41,10 @@ export default function AddVehicleModal({ show, customer, onClose, onCreated }) 
         year: form.year ? Number(form.year) : null,
         chassisNumber: form.chassisNumber || null,
         engineNumber: form.engineNumber || null,
+        vehicleCategory: form.vehicleCategory || null,
+        insuranceCompany: form.insuranceCompany || null,
+        insuranceExpiry: form.insuranceExpiry || null,
+        pucExpiry: form.pucExpiry || null,
         notes: form.notes || null,
       });
       toast.success(`${vehicle.vehicleModel} added to ${customer.customerName}`);
@@ -91,6 +96,14 @@ export default function AddVehicleModal({ show, customer, onClose, onCreated }) 
           <input type="number" min="0" className="form-control" value={form.odometer} onChange={(e) => set({ odometer: e.target.value })} />
         </div>
         <div className="col-md-6">
+          <label className="form-label">Category</label>
+          <select className="form-select" value={form.vehicleCategory} onChange={(e) => set({ vehicleCategory: e.target.value })}>
+            <option value="">Select...</option>
+            <option value="CAR">Car</option>
+            <option value="BIKE">Bike</option>
+          </select>
+        </div>
+        <div className="col-md-6">
           <label className="form-label">Vehicle Type</label>
           <select className="form-select" value={form.vehicleType} onChange={(e) => set({ vehicleType: e.target.value })}>
             <option value="">Select...</option>
@@ -119,6 +132,18 @@ export default function AddVehicleModal({ show, customer, onClose, onCreated }) 
         <div className="col-md-6">
           <label className="form-label">Engine Number</label>
           <input className="form-control" value={form.engineNumber} onChange={(e) => set({ engineNumber: e.target.value })} />
+        </div>
+        <div className="col-md-6">
+          <label className="form-label">Insurance Company</label>
+          <input className="form-control" value={form.insuranceCompany} onChange={(e) => set({ insuranceCompany: e.target.value })} />
+        </div>
+        <div className="col-md-6">
+          <label className="form-label">Insurance Expiry</label>
+          <input type="date" className="form-control" value={form.insuranceExpiry} onChange={(e) => set({ insuranceExpiry: e.target.value })} />
+        </div>
+        <div className="col-md-6">
+          <label className="form-label">PUC Expiry</label>
+          <input type="date" className="form-control" value={form.pucExpiry} onChange={(e) => set({ pucExpiry: e.target.value })} />
         </div>
         <div className="col-12">
           <label className="form-label">Notes</label>

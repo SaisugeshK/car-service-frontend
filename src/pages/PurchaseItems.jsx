@@ -5,21 +5,27 @@ import purchasesService from '../services/purchasesService';
 import productsService from '../services/productsService';
 import { purchaseItemSchema } from '../utils/validationSchemas';
 import Loader from '../components/Loader';
+import ErrorPage from './ErrorPage';
 
 export default function PurchaseItems() {
   const [refs, setRefs] = useState(null);
+  const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
-    Promise.all([purchasesService.getAll(), productsService.getAll({ itemType: 'PRODUCT' })]).then(
-      ([purchases, products]) => {
+  const load = () => {
+    setLoadError(false);
+    Promise.all([purchasesService.getAll(), productsService.getAll({ itemType: 'PRODUCT' })])
+      .then(([purchases, products]) => {
         setRefs({
           purchases: Array.isArray(purchases) ? purchases : purchases?.content || [],
           products: Array.isArray(products) ? products : products?.content || [],
         });
-      }
-    );
-  }, []);
+      })
+      .catch(() => setLoadError(true));
+  };
 
+  useEffect(load, []);
+
+  if (loadError) return <ErrorPage message="Could not load references. Check your connection and try again." onRetry={load} />;
   if (!refs) return <Loader label="Loading references..." />;
   const { purchases, products } = refs;
 

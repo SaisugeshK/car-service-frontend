@@ -7,13 +7,23 @@
  * @param {Array<{itemType: 'SERVICE'|'PRODUCT', unitPrice: number, quantity: number, discount: number, taxPercentage: number}>} items
  * @param {number} additionalDiscount overall/invoice-level discount, applied after tax
  */
+// Round-half-up to 2 decimal places (paisa) — matches java.math.RoundingMode.HALF_UP on the
+// backend's InvoiceCalculator. Plain `taxable * pct / 100` can land on a value like 323.9964,
+// which used to differ from what the backend persists (324.00) once it rounds on save — this
+// mirror rounds at the same point so the live POS/estimate preview never disagrees with what
+// gets confirmed. toFixed() alone isn't enough here since only the *stored* number needs to be
+// exact — callers that add/compare taxAmount before formatting must see the rounded value too.
+function round2(value) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
 export function calculateInvoiceTotals(items, additionalDiscount = 0) {
   const lines = items.map((item) => {
     const gross = Number(item.unitPrice || 0) * Number(item.quantity || 0);
     const discount = Number(item.discount || 0);
     const taxable = Math.max(0, gross - discount);
     const taxPercentage = Number(item.taxPercentage || 0);
-    const taxAmount = (taxable * taxPercentage) / 100;
+    const taxAmount = round2((taxable * taxPercentage) / 100);
     const totalAmount = taxable + taxAmount;
     return { itemType: item.itemType, gross, discount, taxable, taxPercentage, taxAmount, totalAmount };
   });

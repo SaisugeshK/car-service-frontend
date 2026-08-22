@@ -9,6 +9,7 @@ import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Loader from '../components/Loader';
+import ErrorPage from './ErrorPage';
 
 const emptyLine = () => ({ productId: '', quantity: 1, purchasePrice: 0, taxAmount: 0 });
 
@@ -25,15 +26,19 @@ export default function Purchases() {
   const [supplierId, setSupplierId] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('PAID');
   const [lines, setLines] = useState([emptyLine()]);
+  const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
-    Promise.all([suppliersService.getAll(), productsService.getAll({ itemType: 'PRODUCT' })]).then(
-      ([s, p]) => {
+  const loadRefs = () => {
+    setLoadError(false);
+    Promise.all([suppliersService.getAll(), productsService.getAll({ itemType: 'PRODUCT' })])
+      .then(([s, p]) => {
         setSuppliers(Array.isArray(s) ? s : s?.content || []);
         setProducts(Array.isArray(p) ? p : p?.content || []);
-      }
-    );
-  }, []);
+      })
+      .catch(() => setLoadError(true));
+  };
+
+  useEffect(loadRefs, []);
 
   const totals = useMemo(() => {
     const totalAmount = lines.reduce(
@@ -96,6 +101,7 @@ export default function Purchases() {
     setDeletingRow(null);
   };
 
+  if (loadError) return <ErrorPage message="Could not load purchase data. Check your connection and try again." onRetry={loadRefs} />;
   if (!suppliers || !products) return <Loader label="Loading purchase data..." />;
 
   return (

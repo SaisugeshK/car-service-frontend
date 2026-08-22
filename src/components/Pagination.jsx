@@ -16,22 +16,22 @@ export default function Pagination({ page, totalPages, onPageChange, totalItems,
       <small className="text-muted">
         Showing {from}-{to} of {totalItems}
       </small>
-      <nav>
+      <nav aria-label="Pagination">
         <ul className="pagination pagination-sm mb-0">
           <li className={`page-item ${page === 1 ? 'disabled' : ''}`}>
-            <button className="page-link" onClick={() => onPageChange(page - 1)}>
+            <button className="page-link" aria-label="Previous page" disabled={page === 1} onClick={() => onPageChange(page - 1)}>
               <FiChevronLeft />
             </button>
           </li>
           {pages.map((p) => (
             <li key={p} className={`page-item ${p === page ? 'active' : ''}`}>
-              <button className="page-link" onClick={() => onPageChange(p)}>
+              <button className="page-link" aria-label={`Page ${p}`} aria-current={p === page ? 'page' : undefined} onClick={() => onPageChange(p)}>
                 {p}
               </button>
             </li>
           ))}
           <li className={`page-item ${page === totalPages ? 'disabled' : ''}`}>
-            <button className="page-link" onClick={() => onPageChange(page + 1)}>
+            <button className="page-link" aria-label="Next page" disabled={page === totalPages} onClick={() => onPageChange(page + 1)}>
               <FiChevronRight />
             </button>
           </li>

@@ -16,6 +16,7 @@ export default function ConfirmDialog({
       show={show}
       onClose={onCancel}
       title={title}
+      tone={confirmVariant === 'danger' || confirmVariant === 'warning' ? confirmVariant : 'primary'}
       footer={
         <>
           <button className="btn btn-secondary" onClick={onCancel} disabled={isLoading}>
@@ -32,7 +33,7 @@ export default function ConfirmDialog({
       }
     >
       <div className="d-flex align-items-start gap-3">
-        <FiAlertTriangle size={28} className="text-danger flex-shrink-0" />
+        <FiAlertTriangle size={28} className={`flex-shrink-0 text-${confirmVariant === 'danger' || confirmVariant === 'warning' ? confirmVariant : 'primary'}`} />
         <p className="mb-0">{message}</p>
       </div>
     </Modal>

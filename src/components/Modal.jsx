@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { FiX } from 'react-icons/fi';
 
-export default function Modal({ show, title, onClose, children, footer, size = '' }) {
+export default function Modal({ show, title, onClose, children, footer, size = '', tone = 'primary' }) {
   useEffect(() => {
     if (!show) return undefined;
     const onKeyDown = (e) => {
@@ -29,7 +29,7 @@ export default function Modal({ show, title, onClose, children, footer, size = '
       >
         <div className={`modal-dialog modal-dialog-centered ${size}`} role="document">
           <div className="modal-content erp-card">
-            <div className="modal-header">
+            <div className={`modal-header modal-header-${tone}`}>
               <h5 className="modal-title">{title}</h5>
               <button type="button" className="btn-close" onClick={onClose} aria-label="Close">
                 <FiX />

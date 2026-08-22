@@ -86,6 +86,15 @@ api.interceptors.response.use(
 
     const originalRequest = error.config || {};
 
+    // Timeout — axios sets code ECONNABORTED and message 'timeout of Nms exceeded' for this,
+    // distinct from a dropped connection even though both leave error.response empty. Worth its
+    // own message: "check your connection" is misleading when the connection is fine and the
+    // server (or a slow query) just didn't answer in time.
+    if (error.code === 'ECONNABORTED' && /timeout/i.test(error.message || '')) {
+      toast.error('Request timed out. The server took too long to respond — please try again.');
+      return Promise.reject(error);
+    }
+
     // Network / no response at all
     if (!error.response) {
       toast.error('Network error. Please check your connection or the server.');

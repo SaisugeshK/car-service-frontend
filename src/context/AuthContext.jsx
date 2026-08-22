@@ -30,9 +30,11 @@ export function AuthProvider({ children }) {
     const accessToken = data?.token || data?.accessToken || data?.jwt;
     const refreshToken = data?.refreshToken;
     const loggedInUser = data?.user || {
+      userId: data?.userId,
       username: data?.username,
       email: data?.email ?? credentials.email,
       roleId: data?.roleId,
+      role: data?.roleName ?? null, // null = no role assigned yet, treated as least-privilege
     };
 
     if (!accessToken) {
@@ -49,6 +51,12 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
+    // Best-effort, fire-and-forget: revokes the refresh token server-side (Phase 33/34) so it
+    // can't be replayed after logout. The user is logged out either way — this never blocks or
+    // fails the local logout, it just also closes the door on the backend when it can.
+    const refreshToken = tokenStorage.getRefreshToken();
+    if (refreshToken) authService.logout(refreshToken).catch(() => {});
+
     tokenStorage.clear();
     localStorage.removeItem(USER_KEY);
     setUser(null);
@@ -56,9 +64,14 @@ export function AuthProvider({ children }) {
     toast.success('Logged out');
   };
 
+  // SUPER_ADMIN = full access. A user with no role assigned yet (null) gets treated as
+  // MANAGER-level — least privilege, not a crash — until a SUPER_ADMIN assigns one via Users.
+  const role = user?.role || (user ? 'MANAGER' : null);
+  const isSuperAdmin = role === 'SUPER_ADMIN';
+
   const value = useMemo(
-    () => ({ user, isAuthenticated, initializing, login, logout }),
-    [user, isAuthenticated, initializing]
+    () => ({ user, role, isSuperAdmin, isAuthenticated, initializing, login, logout }),
+    [user, role, isSuperAdmin, isAuthenticated, initializing]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
