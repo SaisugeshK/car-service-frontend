@@ -808,7 +808,15 @@ a > .erp-card:hover,
   background: #fff;
   border-radius: var(--erp-radius-lg);
   overflow: hidden;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(212, 175, 55, 0.12);
+  /* Golden-cream frame (two rings, since box-shadow can't paint a gradient border) plus
+     symmetric left/right depth shadows and a soft ambient gold glow around the whole card. */
+  box-shadow:
+    0 0 0 2px var(--brand-gold-light),
+    0 0 0 5px rgba(212, 175, 55, 0.28),
+    -36px 36px 80px rgba(0, 0, 0, 0.4),
+    36px 36px 80px rgba(0, 0, 0, 0.4),
+    0 30px 80px rgba(0, 0, 0, 0.4),
+    0 0 70px rgba(212, 175, 55, 0.2);
 }
 
 @media (min-width: 768px) {
