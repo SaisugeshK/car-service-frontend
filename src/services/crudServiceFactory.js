@@ -32,7 +32,7 @@ export function createCrudService(basePath, idKey) {
   };
 
   return {
-    getAll: (params) => api.get(basePath, { params }).then((res) => normalize(res.data)),
+    getAll: (params, extraConfig) => api.get(basePath, { params, ...extraConfig }).then((res) => normalize(res.data)),
     getById: (id) => api.get(`${basePath}/${id}`).then((res) => withId(res.data)),
     create: (payload) => api.post(basePath, payload).then((res) => withId(res.data)),
     update: (id, payload) => api.put(`${basePath}/${id}`, payload).then((res) => withId(res.data)),

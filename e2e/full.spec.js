@@ -360,7 +360,195 @@ test.describe('5. Negative E2E — rejected estimate must not be billable', () =
   });
 });
 
-test.describe('6. Duplicate-action protection (UI)', () => {
+test.describe('7. Stale undecided estimate must not block an already-approved one', () => {
+  test('an abandoned CHANGES_REQUESTED revision does not block Generate Invoice once a separate estimate is APPROVED', async ({ page }) => {
+    test.setTimeout(60000);
+    const id = uniq();
+    const custName = `E2E Stale Customer ${id}`;
+    const reg = `E2ESTALE${id}`;
+
+    await login(page);
+    await page.goto('/customers');
+    await page.getByRole('button', { name: /add customer & vehicle/i }).click();
+    await page.getByLabel('Customer Name *').fill(custName);
+    await page.getByLabel('Mobile Number *').fill(`9${id}44`.slice(0, 10));
+    await page.getByLabel('Make *').fill('Honda');
+    await page.getByLabel('Model *').fill('Elevate');
+    await page.getByLabel('Registration Number *').fill(reg);
+    await page.getByRole('button', { name: /save customer & vehicle/i }).click();
+    await expect(page).toHaveURL(/\/customers\/\d+/, { timeout: 8000 });
+
+    await page.goto('/job-cards');
+    await page.getByRole('button', { name: /new job card/i }).click();
+    await page.getByLabel('Customer *').selectOption({ label: (await page.getByLabel('Customer *').locator('option', { hasText: custName }).textContent()) });
+    await page.getByLabel('Vehicle *').selectOption({ label: (await page.getByLabel('Vehicle *').locator('option', { hasText: reg }).textContent()) });
+    await page.getByRole('button', { name: /create job card/i }).click();
+    await expect(page).toHaveURL(/\/job-cards\/\d+/, { timeout: 8000 });
+
+    // REV1: create an estimate, then request changes on it — leaves it CHANGES_REQUESTED and
+    // abandoned (never followed through with "Edit & Create Revision").
+    await page.getByRole('button', { name: 'Estimate', exact: true }).click();
+    await page.getByPlaceholder(/search service/i).fill('Inspection Fee');
+    await page.locator('.list-group-item', { hasText: 'Inspection Fee' }).first().click();
+    await page.getByRole('button', { name: /^save estimate$/i }).click();
+    await expect(page.locator('text=/PENDING/')).toBeVisible({ timeout: 8000 });
+    await page.getByRole('button', { name: 'Request Changes', exact: true }).first().click();
+    await page.locator('textarea').last().fill('E2E: customer wants a different service instead');
+    await page.getByRole('button', { name: /submit & revise/i }).click();
+    // The badge renders the status with the underscore swapped for a space.
+    await expect(page.locator('.badge', { hasText: 'CHANGES REQUESTED' }).first()).toBeVisible({ timeout: 8000 });
+    // "Submit & Revise" drops straight into an in-progress revision draft — cancel it to leave
+    // the original genuinely abandoned at CHANGES_REQUESTED, matching the real scenario (staff
+    // started a revision, then decided to create an unrelated fresh estimate instead).
+    await page.getByRole('button', { name: /cancel revision/i }).click();
+
+    // A separate, fresh estimate — approved. The first one stays abandoned at CHANGES_REQUESTED.
+    await page.getByPlaceholder(/search service/i).fill('General Car Service');
+    await page.locator('.list-group-item', { hasText: 'General Car Service' }).first().click();
+    await page.getByRole('button', { name: /^save estimate$/i }).click();
+    await expect(page.locator('text=/PENDING/').first()).toBeVisible({ timeout: 8000 });
+    await page.getByRole('button', { name: 'Approve', exact: true }).first().click();
+    await expect(page.locator('.badge', { hasText: 'APPROVED' }).first()).toBeVisible({ timeout: 8000 });
+
+    // Regression: Generate Invoice must be enabled, not stuck behind the abandoned estimate.
+    await page.getByRole('button', { name: 'Invoice', exact: true }).click();
+    await expect(page.locator('text=/still awaiting the customer.s decision/i')).toHaveCount(0);
+    const genBtn = page.getByRole('button', { name: /^generate invoice$/i });
+    await expect(genBtn).toBeEnabled({ timeout: 8000 });
+    await genBtn.click();
+    await expect(page.locator('text=/invoice.*generated/i')).toBeVisible({ timeout: 8000 });
+  });
+});
+
+test.describe('9. Invoice summary — approved estimate + approved additional work', () => {
+  test('summary total, PAID IN FULL / BALANCE DUE / CHANGE TO RETURN feedback, rejected additional work excluded', async ({ page }) => {
+    test.setTimeout(90000);
+    const id = uniq();
+    const custName = `E2E Summary Customer ${id}`;
+    const reg = `E2ESUM${id}`;
+
+    await login(page);
+    await page.goto('/customers');
+    await page.getByRole('button', { name: /add customer & vehicle/i }).click();
+    await page.getByLabel('Customer Name *').fill(custName);
+    await page.getByLabel('Mobile Number *').fill(`9${id}55`.slice(0, 10));
+    await page.getByLabel('Make *').fill('Honda');
+    await page.getByLabel('Model *').fill('Jazz');
+    await page.getByLabel('Registration Number *').fill(reg);
+    await page.getByRole('button', { name: /save customer & vehicle/i }).click();
+    await expect(page).toHaveURL(/\/customers\/\d+/, { timeout: 8000 });
+
+    await page.goto('/job-cards');
+    await page.getByRole('button', { name: /new job card/i }).click();
+    await page.getByLabel('Customer *').selectOption({ label: (await page.getByLabel('Customer *').locator('option', { hasText: custName }).textContent()) });
+    await page.getByLabel('Vehicle *').selectOption({ label: (await page.getByLabel('Vehicle *').locator('option', { hasText: reg }).textContent()) });
+    await page.getByRole('button', { name: /create job card/i }).click();
+    await expect(page).toHaveURL(/\/job-cards\/\d+/, { timeout: 8000 });
+
+    // Estimate: General Car Service (default price 1500, 18% GST -> 1770.00), approved.
+    await page.getByRole('button', { name: 'Estimate', exact: true }).click();
+    await page.getByPlaceholder(/search service/i).fill('General Car Service');
+    await page.locator('.list-group-item', { hasText: 'General Car Service' }).first().click();
+    await page.getByRole('button', { name: /^save estimate$/i }).click();
+    await expect(page.locator('text=/PENDING/')).toBeVisible({ timeout: 8000 });
+    await page.getByRole('button', { name: 'Approve', exact: true }).first().click();
+    await expect(page.locator('.badge', { hasText: 'APPROVED' }).first()).toBeVisible({ timeout: 8000 });
+
+    // Additional work #1: Wheel Alignment (800, 18% GST -> 944.00), approved -> counted.
+    await page.getByRole('button', { name: 'Additional Work', exact: true }).click();
+    await page.getByPlaceholder(/search service/i).fill('Wheel Alignment');
+    await page.locator('.list-group-item', { hasText: 'Wheel Alignment' }).first().click();
+    await page.locator('textarea').last().fill('E2E: wheel alignment needed');
+    await page.getByRole('button', { name: /send for customer approval/i }).click();
+    await expect(page.locator('.badge', { hasText: 'PENDING' }).first()).toBeVisible({ timeout: 8000 });
+    await page.getByRole('button', { name: 'Approve', exact: true }).first().click();
+    await expect(page.locator('.badge', { hasText: 'APPROVED' }).first()).toBeVisible({ timeout: 8000 });
+
+    // Additional work #2: Decarbonization (2500, 18% GST -> 2950.00), REJECTED -> must be excluded.
+    await page.getByPlaceholder(/search service/i).fill('Decarbonization');
+    await page.locator('.list-group-item', { hasText: 'Decarbonization' }).first().click();
+    await page.locator('textarea').last().fill('E2E: decarbonization, customer declines');
+    await page.getByRole('button', { name: /send for customer approval/i }).click();
+    await expect(page.locator('.badge', { hasText: 'PENDING' }).first()).toBeVisible({ timeout: 8000 });
+    await page.getByRole('button', { name: 'Reject', exact: true }).first().click();
+    await expect(page.locator('.badge', { hasText: 'REJECTED' }).first()).toBeVisible({ timeout: 8000 });
+
+    // Invoice tab: summary must be Estimate 1770.00 + Additional Work 944.00 (not 2950 rejected) = 2714.00.
+    await page.getByRole('button', { name: 'Invoice', exact: true }).click();
+    await expect(page.locator('text=Invoice Summary')).toBeVisible({ timeout: 8000 });
+    await expect(page.locator('text=TOTAL AMOUNT DUE').locator('xpath=..')).toContainText('2714.00');
+    await expect(page.locator('text=/customer should pay/i')).toContainText('2714.00');
+
+    // Amount Received field renamed + helper text.
+    await expect(page.locator('text=Amount Received from Customer')).toBeVisible();
+    await expect(page.locator('text=/enter the amount actually received/i')).toBeVisible();
+
+    const amountInput = page.locator('input[type="number"]').last();
+
+    // Under-pay -> BALANCE DUE, button still enabled (partial payment is legitimate).
+    await amountInput.fill('2000');
+    await expect(page.locator('text=/balance due: 714.00/i')).toBeVisible();
+    await expect(page.getByRole('button', { name: /^generate invoice$/i })).toBeEnabled();
+
+    // Exact match -> PAID IN FULL.
+    await amountInput.fill('2714');
+    await expect(page.locator('text=/paid in full/i')).toBeVisible();
+    await expect(page.locator('text=/balance due: 0.00/i')).toBeVisible();
+
+    // Over-pay -> CHANGE TO RETURN, warns only the total will be recorded as paid.
+    await amountInput.fill('3000');
+    await expect(page.locator('text=/change to return: 286.00/i')).toBeVisible();
+    await expect(page.locator('text=/only 2714.00 will be recorded as paid/i')).toBeVisible();
+
+    // Generate with the overpaid amount still on screen — must record exactly the total (2714.00),
+    // never the raw 3000 typed in, and the invoice's own balance must never go negative.
+    await page.getByRole('button', { name: /^generate invoice$/i }).click();
+    await expect(page.locator('text=/invoice.*generated/i')).toBeVisible({ timeout: 8000 });
+    await expect(page.locator('text=/grand total/i').locator('xpath=following-sibling::strong')).toContainText('2714.00');
+    await expect(page.locator('text=Paid').locator('xpath=following-sibling::span')).toContainText('2714.00');
+    await expect(page.locator('text=Balance').locator('xpath=following-sibling::span')).toContainText('0.00');
+  });
+
+  test('empty invalid amount blocks Generate Invoice', async ({ page }) => {
+    test.setTimeout(60000);
+    const id = uniq();
+    const custName = `E2E Invalid Amount Customer ${id}`;
+    const reg = `E2EINV${id}`;
+
+    await login(page);
+    await page.goto('/customers');
+    await page.getByRole('button', { name: /add customer & vehicle/i }).click();
+    await page.getByLabel('Customer Name *').fill(custName);
+    await page.getByLabel('Mobile Number *').fill(`9${id}66`.slice(0, 10));
+    await page.getByLabel('Make *').fill('Honda');
+    await page.getByLabel('Model *').fill('Brio');
+    await page.getByLabel('Registration Number *').fill(reg);
+    await page.getByRole('button', { name: /save customer & vehicle/i }).click();
+    await expect(page).toHaveURL(/\/customers\/\d+/, { timeout: 8000 });
+
+    await page.goto('/job-cards');
+    await page.getByRole('button', { name: /new job card/i }).click();
+    await page.getByLabel('Customer *').selectOption({ label: (await page.getByLabel('Customer *').locator('option', { hasText: custName }).textContent()) });
+    await page.getByLabel('Vehicle *').selectOption({ label: (await page.getByLabel('Vehicle *').locator('option', { hasText: reg }).textContent()) });
+    await page.getByRole('button', { name: /create job card/i }).click();
+    await expect(page).toHaveURL(/\/job-cards\/\d+/, { timeout: 8000 });
+
+    await page.getByRole('button', { name: 'Estimate', exact: true }).click();
+    await page.getByPlaceholder(/search service/i).fill('General Car Service');
+    await page.locator('.list-group-item', { hasText: 'General Car Service' }).first().click();
+    await page.getByRole('button', { name: /^save estimate$/i }).click();
+    await expect(page.locator('text=/PENDING/')).toBeVisible({ timeout: 8000 });
+    await page.getByRole('button', { name: 'Approve', exact: true }).first().click();
+    await expect(page.locator('.badge', { hasText: 'APPROVED' }).first()).toBeVisible({ timeout: 8000 });
+
+    await page.getByRole('button', { name: 'Invoice', exact: true }).click();
+    const amountInput = page.locator('input[type="number"]').last();
+    await amountInput.fill('');
+    await expect(page.getByRole('button', { name: /^generate invoice$/i })).toBeDisabled();
+  });
+});
+
+test.describe('8. Duplicate-action protection (UI)', () => {
   test('rapid double-click on Generate Invoice does not create two invoices', async ({ page }) => {
     test.setTimeout(60000);
     const id = uniq();
@@ -398,7 +586,10 @@ test.describe('6. Duplicate-action protection (UI)', () => {
     await expect(genBtn).toBeEnabled({ timeout: 8000 });
     // Fire both clicks at the same screen coordinates back-to-back — real mouse events, not
     // locator.click()'s own actionability-wait-and-retry (which fights itself once the first
-    // click's response swaps the button out of the DOM).
+    // click's response swaps the button out of the DOM). scrollIntoViewIfNeeded first since
+    // boundingBox() reports viewport-relative coordinates — with the Invoice Summary card now
+    // above it, the button can start below the fold.
+    await genBtn.scrollIntoViewIfNeeded();
     const box = await genBtn.boundingBox();
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);

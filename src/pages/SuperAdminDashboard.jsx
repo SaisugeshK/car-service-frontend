@@ -84,7 +84,10 @@ function StatCard({ icon: Icon, label, value, to, color, bgColor, small }) {
       </div>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</div>
-        <div style={{ fontSize: small ? 18 : 22, fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>{value}</div>
+        {/* overflowWrap lets a wide, unbroken value ("₹40,000" has no space to wrap at) break
+            onto a second line instead of spilling past the card's edge — cramped cards like the
+            Card/UPI half-width ones are the ones that actually hit this. */}
+        <div style={{ fontSize: small ? 18 : 22, fontWeight: 800, color: '#0f172a', lineHeight: 1.1, overflowWrap: 'break-word' }}>{value}</div>
       </div>
     </div>
   );
@@ -343,11 +346,14 @@ export default function SuperAdminDashboard() {
           <StatCard icon={FiDollarSign} label="Cash" value={currency(paymentMix.cash)} to="/payments" color="#16a34a" bgColor="rgba(22,163,74,0.1)" small />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <div className="row g-3 h-100">
-            <div className="col-6">
+          {/* Stacked full-width, not side-by-side col-6/col-6 — at quarter-row width split in
+              half again, a real balance like ₹63,143 had nowhere to go but wrap one digit per
+              line. Full width per card gives it the same room Cash gets, just shorter. */}
+          <div className="row g-2 h-100">
+            <div className="col-12">
               <StatCard icon={FiCreditCard} label="Card" value={currency(paymentMix.card)} to="/payments" color="#6366f1" bgColor="rgba(99,102,241,0.1)" small />
             </div>
-            <div className="col-6">
+            <div className="col-12">
               <StatCard icon={FiCreditCard} label="UPI" value={currency(paymentMix.upi)} to="/payments" color="#0ea5e9" bgColor="rgba(14,165,233,0.1)" small />
             </div>
           </div>

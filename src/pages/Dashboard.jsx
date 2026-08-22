@@ -59,7 +59,7 @@ function StatCard({ icon: Icon, label, value, to, color, bgColor }) {
       </div>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>{value}</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', lineHeight: 1.1, overflowWrap: 'break-word' }}>{value}</div>
       </div>
     </div>
   );

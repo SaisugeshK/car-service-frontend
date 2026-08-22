@@ -159,6 +159,14 @@ api.interceptors.response.use(
       }
     }
 
+    // A caller that already renders its own inline message for an expected failure (e.g. a
+    // staff-list dropdown a MANAGER role can't load — see JobCardDetail.jsx, Payments.jsx,
+    // Complaints.jsx) opts out with { skipErrorToast: true } so the user doesn't also get an
+    // unexplained "Forbidden" popup for something the screen already explains.
+    if (originalRequest.skipErrorToast) {
+      return Promise.reject(error);
+    }
+
     // ---- Global error toasts ----
     switch (status) {
       case 400:
