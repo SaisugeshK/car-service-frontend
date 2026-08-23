@@ -148,8 +148,8 @@ test.describe('Accessibility (axe-core)', () => {
     await page.locator('#email').focus();
     await expect(page.getByLabel('Email')).toBeFocused();
     await page.keyboard.press('Tab'); // password
-    await expect(page.getByLabel('Password')).toBeFocused();
+    await expect(page.getByLabel(/^password/i)).toBeFocused();
     await page.keyboard.press('Tab'); // submit button
-    await expect(page.getByRole('button', { name: /sign in/i })).toBeFocused();
+    await expect(page.getByRole('button', { name: /^login$/i })).toBeFocused();
   });
 });

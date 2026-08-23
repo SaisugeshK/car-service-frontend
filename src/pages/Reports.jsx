@@ -19,6 +19,7 @@ import vehiclesService from '../services/vehiclesService';
 import customersService from '../services/customersService';
 import Loader from '../components/Loader';
 import ErrorPage from './ErrorPage';
+import { DASHBOARD_TONES as T } from '../utils/dashboardTheme';
 import EmptyState from '../components/EmptyState';
 
 const asList = (data) => (Array.isArray(data) ? data : data?.content || data?.data || []);
@@ -86,13 +87,13 @@ function StatCard({ icon: Icon, label, value, color, bgColor }) {
   return (
     <div style={{
       background: '#fff', borderRadius: 14, padding: '16px 18px', border: '1px solid #e2e8f0',
-      boxShadow: '0 2px 12px rgba(37,99,235,0.06)', display: 'flex', alignItems: 'center', gap: 14, height: '100%',
+      boxShadow: '0 1px 2px rgba(23,20,18,0.04), 0 4px 12px rgba(23,20,18,0.05)', display: 'flex', alignItems: 'center', gap: 14, height: '100%',
     }}>
       <div style={{
-        width: 42, height: 42, borderRadius: 12, background: bgColor || 'rgba(37,99,235,0.1)',
+        width: 42, height: 42, borderRadius: 12, background: bgColor || T.brand.bg,
         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
       }}>
-        <Icon size={18} color={color || '#2563eb'} />
+        <Icon size={18} color={color || T.brand.color} />
       </div>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</div>
@@ -420,13 +421,13 @@ export default function Reports() {
       {tab === 'revenue' && (
         <>
           <Row>
-            <Col><StatCard icon={FiTrendingUp} label="Total Revenue" value={currency(revenue.total)} color="#2563eb" bgColor="rgba(37,99,235,0.1)" /></Col>
-            <Col><StatCard icon={FiTool} label="Service Revenue" value={currency(revenue.serviceRevenue)} color="#0ea5e9" bgColor="rgba(14,165,233,0.1)" /></Col>
-            <Col><StatCard icon={FiPackage} label="Parts Revenue" value={currency(revenue.partsRevenue)} color="#8b5cf6" bgColor="rgba(139,92,246,0.1)" /></Col>
-            <Col><StatCard icon={FaCarSide} label="Car Revenue" value={currency(revenue.carRevenue)} color="#2563eb" bgColor="rgba(37,99,235,0.1)" /></Col>
+            <Col><StatCard icon={FiTrendingUp} label="Total Revenue" value={currency(revenue.total)} color={T.brand.color} bgColor={T.brand.bg} /></Col>
+            <Col><StatCard icon={FiTool} label="Service Revenue" value={currency(revenue.serviceRevenue)} color={T.brand.color} bgColor={T.brand.bg} /></Col>
+            <Col><StatCard icon={FiPackage} label="Parts Revenue" value={currency(revenue.partsRevenue)} color={T.brand.color} bgColor={T.brand.bg} /></Col>
+            <Col><StatCard icon={FaCarSide} label="Car Revenue" value={currency(revenue.carRevenue)} color={T.brand.color} bgColor={T.brand.bg} /></Col>
           </Row>
           <Row>
-            <Col><StatCard icon={FaMotorcycle} label="Bike Revenue" value={currency(revenue.bikeRevenue)} color="#f59e0b" bgColor="rgba(245,158,11,0.1)" /></Col>
+            <Col><StatCard icon={FaMotorcycle} label="Bike Revenue" value={currency(revenue.bikeRevenue)} color={T.warning.color} bgColor={T.warning.bg} /></Col>
           </Row>
           <div className="row g-3">
             <div className="col-lg-6">
@@ -459,12 +460,12 @@ export default function Reports() {
 
       {tab === 'customers' && (
         <Row>
-          <Col><StatCard icon={FiUserCheck} label="Customers Served" value={customersVehicles.total} color="#8b5cf6" bgColor="rgba(139,92,246,0.1)" /></Col>
-          <Col><StatCard icon={FiRepeat} label="Returning Customers" value={customersVehicles.returning} color="#0ea5e9" bgColor="rgba(14,165,233,0.1)" /></Col>
-          <Col><StatCard icon={FiUserCheck} label="New Customers" value={customersVehicles.newCount} color="#16a34a" bgColor="rgba(22,163,74,0.1)" /></Col>
-          <Col><StatCard icon={FaCarSide} label="Vehicles Serviced" value={customersVehicles.vehiclesServiced} color="#2563eb" bgColor="rgba(37,99,235,0.1)" /></Col>
-          <Col><StatCard icon={FaCarSide} label="Total Cars Registered" value={customersVehicles.carCount} color="#2563eb" bgColor="rgba(37,99,235,0.1)" /></Col>
-          <Col><StatCard icon={FaMotorcycle} label="Total Bikes Registered" value={customersVehicles.bikeCount} color="#f59e0b" bgColor="rgba(245,158,11,0.1)" /></Col>
+          <Col><StatCard icon={FiUserCheck} label="Customers Served" value={customersVehicles.total} color={T.neutral.color} bgColor={T.neutral.bg} /></Col>
+          <Col><StatCard icon={FiRepeat} label="Returning Customers" value={customersVehicles.returning} color={T.neutral.color} bgColor={T.neutral.bg} /></Col>
+          <Col><StatCard icon={FiUserCheck} label="New Customers" value={customersVehicles.newCount} color={T.success.color} bgColor={T.success.bg} /></Col>
+          <Col><StatCard icon={FaCarSide} label="Vehicles Serviced" value={customersVehicles.vehiclesServiced} color={T.brand.color} bgColor={T.brand.bg} /></Col>
+          <Col><StatCard icon={FaCarSide} label="Total Cars Registered" value={customersVehicles.carCount} color={T.brand.color} bgColor={T.brand.bg} /></Col>
+          <Col><StatCard icon={FaMotorcycle} label="Total Bikes Registered" value={customersVehicles.bikeCount} color={T.warning.color} bgColor={T.warning.bg} /></Col>
         </Row>
       )}
 
@@ -482,10 +483,10 @@ export default function Reports() {
       {tab === 'estimates' && (
         <>
           <Row>
-            <Col><StatCard icon={FiFileText} label="Pending" value={estimateStats.pending} color="#f59e0b" bgColor="rgba(245,158,11,0.1)" /></Col>
-            <Col><StatCard icon={FiCheckCircle} label="Approved" value={estimateStats.approved} color="#16a34a" bgColor="rgba(22,163,74,0.1)" /></Col>
-            <Col><StatCard icon={FiXCircle} label="Rejected" value={estimateStats.rejected.length} color="#dc2626" bgColor="rgba(220,38,38,0.1)" /></Col>
-            <Col><StatCard icon={FiPercent} label="Conversion Rate" value={`${estimateStats.conversionRate.toFixed(0)}%`} color="#2563eb" bgColor="rgba(37,99,235,0.1)" /></Col>
+            <Col><StatCard icon={FiFileText} label="Pending" value={estimateStats.pending} color={T.warning.color} bgColor={T.warning.bg} /></Col>
+            <Col><StatCard icon={FiCheckCircle} label="Approved" value={estimateStats.approved} color={T.success.color} bgColor={T.success.bg} /></Col>
+            <Col><StatCard icon={FiXCircle} label="Rejected" value={estimateStats.rejected.length} color={T.danger.color} bgColor={T.danger.bg} /></Col>
+            <Col><StatCard icon={FiPercent} label="Conversion Rate" value={`${estimateStats.conversionRate.toFixed(0)}%`} color={T.brand.color} bgColor={T.brand.bg} /></Col>
           </Row>
           <div className="erp-card p-3">
             <h6 className="mb-3">Rejected Estimates</h6>
@@ -502,20 +503,20 @@ export default function Reports() {
 
       {tab === 'additionalwork' && (
         <Row>
-          <Col><StatCard icon={FiFileText} label="Pending" value={additionalWorkStats.pending} color="#f59e0b" bgColor="rgba(245,158,11,0.1)" /></Col>
-          <Col><StatCard icon={FiCheckCircle} label="Approved" value={additionalWorkStats.approved} color="#16a34a" bgColor="rgba(22,163,74,0.1)" /></Col>
-          <Col><StatCard icon={FiXCircle} label="Rejected" value={additionalWorkStats.rejected} color="#dc2626" bgColor="rgba(220,38,38,0.1)" /></Col>
-          <Col><StatCard icon={FiDollarSign} label="Approved Value" value={currency(additionalWorkStats.approvedValue)} color="#2563eb" bgColor="rgba(37,99,235,0.1)" /></Col>
+          <Col><StatCard icon={FiFileText} label="Pending" value={additionalWorkStats.pending} color={T.warning.color} bgColor={T.warning.bg} /></Col>
+          <Col><StatCard icon={FiCheckCircle} label="Approved" value={additionalWorkStats.approved} color={T.success.color} bgColor={T.success.bg} /></Col>
+          <Col><StatCard icon={FiXCircle} label="Rejected" value={additionalWorkStats.rejected} color={T.danger.color} bgColor={T.danger.bg} /></Col>
+          <Col><StatCard icon={FiDollarSign} label="Approved Value" value={currency(additionalWorkStats.approvedValue)} color={T.brand.color} bgColor={T.brand.bg} /></Col>
         </Row>
       )}
 
       {tab === 'payments' && (
         <>
           <Row>
-            <Col><StatCard icon={FiDollarSign} label="Cash" value={currency(paymentStats.cash)} color="#16a34a" bgColor="rgba(22,163,74,0.1)" /></Col>
-            <Col><StatCard icon={FiCreditCard} label="Card" value={currency(paymentStats.card)} color="#6366f1" bgColor="rgba(99,102,241,0.1)" /></Col>
-            <Col><StatCard icon={FiCreditCard} label="UPI" value={currency(paymentStats.upi)} color="#0ea5e9" bgColor="rgba(14,165,233,0.1)" /></Col>
-            <Col><StatCard icon={FiAlertTriangle} label="Outstanding" value={currency(paymentStats.outstanding)} color="#dc2626" bgColor="rgba(220,38,38,0.1)" /></Col>
+            <Col><StatCard icon={FiDollarSign} label="Cash" value={currency(paymentStats.cash)} color={T.success.color} bgColor={T.success.bg} /></Col>
+            <Col><StatCard icon={FiCreditCard} label="Card" value={currency(paymentStats.card)} color={T.success.color} bgColor={T.success.bg} /></Col>
+            <Col><StatCard icon={FiCreditCard} label="UPI" value={currency(paymentStats.upi)} color={T.success.color} bgColor={T.success.bg} /></Col>
+            <Col><StatCard icon={FiAlertTriangle} label="Outstanding" value={currency(paymentStats.outstanding)} color={T.danger.color} bgColor={T.danger.bg} /></Col>
           </Row>
           <div className="erp-card p-3">
             <h6 className="mb-3">Outstanding Invoices</h6>
@@ -532,20 +533,20 @@ export default function Reports() {
 
       {tab === 'tax' && (
         <Row>
-          <Col><StatCard icon={FiDollarSign} label="Taxable Value" value={currency(taxStats.taxableValue)} color="#2563eb" bgColor="rgba(37,99,235,0.1)" /></Col>
-          <Col><StatCard icon={FiPercent} label="Total Tax Collected" value={currency(taxStats.totalTax)} color="#8b5cf6" bgColor="rgba(139,92,246,0.1)" /></Col>
-          <Col><StatCard icon={FiPercent} label="CGST" value={currency(taxStats.cgst)} color="#0ea5e9" bgColor="rgba(14,165,233,0.1)" /></Col>
-          <Col><StatCard icon={FiPercent} label="SGST" value={currency(taxStats.sgst)} color="#16a34a" bgColor="rgba(22,163,74,0.1)" /></Col>
+          <Col><StatCard icon={FiDollarSign} label="Taxable Value" value={currency(taxStats.taxableValue)} color={T.brand.color} bgColor={T.brand.bg} /></Col>
+          <Col><StatCard icon={FiPercent} label="Total Tax Collected" value={currency(taxStats.totalTax)} color={T.neutral.color} bgColor={T.neutral.bg} /></Col>
+          <Col><StatCard icon={FiPercent} label="CGST" value={currency(taxStats.cgst)} color={T.neutral.color} bgColor={T.neutral.bg} /></Col>
+          <Col><StatCard icon={FiPercent} label="SGST" value={currency(taxStats.sgst)} color={T.neutral.color} bgColor={T.neutral.bg} /></Col>
         </Row>
       )}
 
       {tab === 'parts' && (
         <>
           <Row>
-            <Col><StatCard icon={FiPackage} label="Parts Used (Qty)" value={partsUsage.totalQtyUsed} color="#2563eb" bgColor="rgba(37,99,235,0.1)" /></Col>
-            <Col><StatCard icon={FiAlertTriangle} label="Low Stock" value={stockStats.lowStock} color="#f59e0b" bgColor="rgba(245,158,11,0.1)" /></Col>
-            <Col><StatCard icon={FiXCircle} label="Out of Stock" value={stockStats.outOfStock} color="#dc2626" bgColor="rgba(220,38,38,0.1)" /></Col>
-            <Col><StatCard icon={FiPackage} label="Products Tracked" value={stockStats.list.length} color="#8b5cf6" bgColor="rgba(139,92,246,0.1)" /></Col>
+            <Col><StatCard icon={FiPackage} label="Parts Used (Qty)" value={partsUsage.totalQtyUsed} color={T.brand.color} bgColor={T.brand.bg} /></Col>
+            <Col><StatCard icon={FiAlertTriangle} label="Low Stock" value={stockStats.lowStock} color={T.warning.color} bgColor={T.warning.bg} /></Col>
+            <Col><StatCard icon={FiXCircle} label="Out of Stock" value={stockStats.outOfStock} color={T.danger.color} bgColor={T.danger.bg} /></Col>
+            <Col><StatCard icon={FiPackage} label="Products Tracked" value={stockStats.list.length} color={T.neutral.color} bgColor={T.neutral.bg} /></Col>
           </Row>
           <div className="row g-3">
             <div className="col-lg-6">
@@ -601,8 +602,8 @@ export default function Reports() {
       {tab === 'reviews' && (
         <>
           <Row>
-            <Col><StatCard icon={FiStar} label="Average Rating" value={reviewStats.total > 0 ? `${reviewStats.average.toFixed(1)} / 5` : '—'} color="#f59e0b" bgColor="rgba(245,158,11,0.1)" /></Col>
-            <Col><StatCard icon={FiStar} label="Total Reviews" value={reviewStats.total} color="#8b5cf6" bgColor="rgba(139,92,246,0.1)" /></Col>
+            <Col><StatCard icon={FiStar} label="Average Rating" value={reviewStats.total > 0 ? `${reviewStats.average.toFixed(1)} / 5` : '—'} color={T.neutral.color} bgColor={T.neutral.bg} /></Col>
+            <Col><StatCard icon={FiStar} label="Total Reviews" value={reviewStats.total} color={T.neutral.color} bgColor={T.neutral.bg} /></Col>
           </Row>
           <div className="erp-card p-3">
             <h6 className="mb-3">Rating Distribution</h6>
@@ -628,10 +629,10 @@ export default function Reports() {
       {tab === 'offers' && (
         <>
           <Row>
-            <Col><StatCard icon={FiGift} label="Running" value={offerStats.running} color="#16a34a" bgColor="rgba(22,163,74,0.1)" /></Col>
-            <Col><StatCard icon={FiGift} label="Scheduled" value={offerStats.scheduled} color="#0ea5e9" bgColor="rgba(14,165,233,0.1)" /></Col>
-            <Col><StatCard icon={FiGift} label="Expired" value={offerStats.expired} color="#dc2626" bgColor="rgba(220,38,38,0.1)" /></Col>
-            <Col><StatCard icon={FiGift} label="Inactive" value={offerStats.inactive} color="#64748b" bgColor="rgba(100,116,139,0.1)" /></Col>
+            <Col><StatCard icon={FiGift} label="Running" value={offerStats.running} color={T.success.color} bgColor={T.success.bg} /></Col>
+            <Col><StatCard icon={FiGift} label="Scheduled" value={offerStats.scheduled} color={T.brand.color} bgColor={T.brand.bg} /></Col>
+            <Col><StatCard icon={FiGift} label="Expired" value={offerStats.expired} color={T.danger.color} bgColor={T.danger.bg} /></Col>
+            <Col><StatCard icon={FiGift} label="Inactive" value={offerStats.inactive} color={T.neutral.color} bgColor={T.neutral.bg} /></Col>
           </Row>
           <div className="erp-card p-3">
             <h6 className="mb-3">Offers</h6>

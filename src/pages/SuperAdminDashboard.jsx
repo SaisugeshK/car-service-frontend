@@ -14,6 +14,7 @@ import productsService from '../services/productsService';
 import reviewsService from '../services/reviewsService';
 import Loader from '../components/Loader';
 import ErrorPage from './ErrorPage';
+import { DASHBOARD_TONES as T } from '../utils/dashboardTheme';
 
 const asList = (data) => (Array.isArray(data) ? data : data?.content || data?.data || []);
 const currency = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -73,14 +74,14 @@ function StatCard({ icon: Icon, label, value, to, color, bgColor, small }) {
   const content = (
     <div style={{
       background: '#fff', borderRadius: 14, padding: small ? '14px 16px' : '18px 20px', border: '1px solid #e2e8f0',
-      boxShadow: '0 2px 12px rgba(37,99,235,0.06)', display: 'flex', alignItems: 'center', gap: 14,
+      boxShadow: '0 1px 2px rgba(23,20,18,0.04), 0 4px 12px rgba(23,20,18,0.05)', display: 'flex', alignItems: 'center', gap: 14,
       height: '100%',
     }}>
       <div style={{
-        width: small ? 38 : 46, height: small ? 38 : 46, borderRadius: 12, background: bgColor || 'rgba(37,99,235,0.1)',
+        width: small ? 38 : 46, height: small ? 38 : 46, borderRadius: 12, background: bgColor || T.brand.bg,
         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
       }}>
-        <Icon size={small ? 16 : 20} color={color || '#2563eb'} />
+        <Icon size={small ? 16 : 20} color={color || T.brand.color} />
       </div>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</div>
@@ -275,13 +276,13 @@ export default function SuperAdminDashboard() {
       {/* Fixed revenue anchors — always today/this-month/all-time, independent of the filter below */}
       <div className="row g-3 mb-3">
         <div className="col-sm-6 col-lg-4">
-          <StatCard icon={FiTrendingUp} label="Today's Revenue" value={currency(fixedRevenue.todaysRevenue)} to="/invoices" color="#2563eb" bgColor="rgba(37,99,235,0.1)" />
+          <StatCard icon={FiTrendingUp} label="Today's Revenue" value={currency(fixedRevenue.todaysRevenue)} to="/invoices" color={T.brand.color} bgColor={T.brand.bg} />
         </div>
         <div className="col-sm-6 col-lg-4">
-          <StatCard icon={FiTrendingUp} label="Monthly Revenue" value={currency(fixedRevenue.monthlyRevenue)} to="/invoices" color="#0ea5e9" bgColor="rgba(14,165,233,0.1)" />
+          <StatCard icon={FiTrendingUp} label="Monthly Revenue" value={currency(fixedRevenue.monthlyRevenue)} to="/invoices" color={T.brand.color} bgColor={T.brand.bg} />
         </div>
         <div className="col-sm-6 col-lg-4">
-          <StatCard icon={FiTrendingUp} label="Total Revenue (All-Time)" value={currency(fixedRevenue.totalRevenue)} to="/invoices" color="#16a34a" bgColor="rgba(22,163,74,0.1)" />
+          <StatCard icon={FiTrendingUp} label="Total Revenue (All-Time)" value={currency(fixedRevenue.totalRevenue)} to="/invoices" color={T.brand.color} bgColor={T.brand.bg} />
         </div>
       </div>
 
@@ -322,28 +323,28 @@ export default function SuperAdminDashboard() {
 
       <div className="row g-3 mb-3">
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiFileText} label="Revenue (Selected Period)" value={currency(revenue.total)} color="#2563eb" bgColor="rgba(37,99,235,0.1)" />
+          <StatCard icon={FiFileText} label="Revenue (Selected Period)" value={currency(revenue.total)} color={T.brand.color} bgColor={T.brand.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiAlertTriangle} label="Outstanding" value={currency(revenue.outstanding)} to="/invoices" color="#dc2626" bgColor="rgba(220,38,38,0.1)" />
+          <StatCard icon={FiAlertTriangle} label="Outstanding" value={currency(revenue.outstanding)} to="/invoices" color={T.danger.color} bgColor={T.danger.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiTool} label="Service Revenue" value={currency(revenue.serviceRevenue)} color="#0ea5e9" bgColor="rgba(14,165,233,0.1)" />
+          <StatCard icon={FiTool} label="Service Revenue" value={currency(revenue.serviceRevenue)} color={T.brand.color} bgColor={T.brand.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiPackage} label="Parts Revenue" value={currency(revenue.partsRevenue)} color="#8b5cf6" bgColor="rgba(139,92,246,0.1)" />
+          <StatCard icon={FiPackage} label="Parts Revenue" value={currency(revenue.partsRevenue)} color={T.brand.color} bgColor={T.brand.bg} />
         </div>
       </div>
 
       <div className="row g-3 mb-3">
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FaCarSide} label="Car Revenue" value={currency(revenue.carRevenue)} color="#2563eb" bgColor="rgba(37,99,235,0.1)" />
+          <StatCard icon={FaCarSide} label="Car Revenue" value={currency(revenue.carRevenue)} color={T.brand.color} bgColor={T.brand.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FaMotorcycle} label="Bike Revenue" value={currency(revenue.bikeRevenue)} color="#f59e0b" bgColor="rgba(245,158,11,0.1)" />
+          <StatCard icon={FaMotorcycle} label="Bike Revenue" value={currency(revenue.bikeRevenue)} color={T.brand.color} bgColor={T.brand.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiDollarSign} label="Cash" value={currency(paymentMix.cash)} to="/payments" color="#16a34a" bgColor="rgba(22,163,74,0.1)" small />
+          <StatCard icon={FiDollarSign} label="Cash" value={currency(paymentMix.cash)} to="/payments" color={T.success.color} bgColor={T.success.bg} small />
         </div>
         <div className="col-sm-6 col-lg-3">
           {/* Stacked full-width, not side-by-side col-6/col-6 — at quarter-row width split in
@@ -351,10 +352,10 @@ export default function SuperAdminDashboard() {
               line. Full width per card gives it the same room Cash gets, just shorter. */}
           <div className="row g-2 h-100">
             <div className="col-12">
-              <StatCard icon={FiCreditCard} label="Card" value={currency(paymentMix.card)} to="/payments" color="#6366f1" bgColor="rgba(99,102,241,0.1)" small />
+              <StatCard icon={FiCreditCard} label="Card" value={currency(paymentMix.card)} to="/payments" color={T.success.color} bgColor={T.success.bg} small />
             </div>
             <div className="col-12">
-              <StatCard icon={FiCreditCard} label="UPI" value={currency(paymentMix.upi)} to="/payments" color="#0ea5e9" bgColor="rgba(14,165,233,0.1)" small />
+              <StatCard icon={FiCreditCard} label="UPI" value={currency(paymentMix.upi)} to="/payments" color={T.success.color} bgColor={T.success.bg} small />
             </div>
           </div>
         </div>
@@ -362,31 +363,31 @@ export default function SuperAdminDashboard() {
 
       <div className="row g-3 mb-3">
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiClipboard} label="Jobs" value={jobStats.total} to="/job-cards" color="#2563eb" bgColor="rgba(37,99,235,0.1)" />
+          <StatCard icon={FiClipboard} label="Jobs" value={jobStats.total} to="/job-cards" color={T.brand.color} bgColor={T.brand.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiClock} label="Jobs In Progress" value={jobStats.inProgress} to="/workshop-board" color="#f59e0b" bgColor="rgba(245,158,11,0.1)" />
+          <StatCard icon={FiClock} label="Jobs In Progress" value={jobStats.inProgress} to="/workshop-board" color={T.warning.color} bgColor={T.warning.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiCheckCircle} label="Ready for Delivery" value={jobStats.readyForDelivery} to="/workshop-board" color="#16a34a" bgColor="rgba(22,163,74,0.1)" />
+          <StatCard icon={FiCheckCircle} label="Ready for Delivery" value={jobStats.readyForDelivery} to="/workshop-board" color={T.success.color} bgColor={T.success.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiPackage} label="Low Stock Parts" value={lowStock.length} to="/stock" color="#dc2626" bgColor="rgba(220,38,38,0.1)" />
+          <StatCard icon={FiPackage} label="Low Stock Parts" value={lowStock.length} to="/stock" color={T.danger.color} bgColor={T.danger.bg} />
         </div>
       </div>
 
       <div className="row g-3 mb-3">
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiUserCheck} label="Customers Served" value={customerStats.total} to="/customers" color="#8b5cf6" bgColor="rgba(139,92,246,0.1)" />
+          <StatCard icon={FiUserCheck} label="Customers Served" value={customerStats.total} to="/customers" color={T.neutral.color} bgColor={T.neutral.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiRepeat} label="Returning Customers" value={customerStats.returning} to="/customers" color="#0ea5e9" bgColor="rgba(14,165,233,0.1)" />
+          <StatCard icon={FiRepeat} label="Returning Customers" value={customerStats.returning} to="/customers" color={T.neutral.color} bgColor={T.neutral.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiStar} label="Average Rating" value={ratingStats.total > 0 ? `${ratingStats.average.toFixed(1)} / 5` : '—'} to="/reviews" color="#f59e0b" bgColor="rgba(245,158,11,0.1)" />
+          <StatCard icon={FiStar} label="Average Rating" value={ratingStats.total > 0 ? `${ratingStats.average.toFixed(1)} / 5` : '—'} to="/reviews" color={T.neutral.color} bgColor={T.neutral.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiStar} label="Reviews" value={ratingStats.total} to="/reviews" color="#8b5cf6" bgColor="rgba(139,92,246,0.1)" />
+          <StatCard icon={FiStar} label="Reviews" value={ratingStats.total} to="/reviews" color={T.neutral.color} bgColor={T.neutral.bg} />
         </div>
       </div>
 

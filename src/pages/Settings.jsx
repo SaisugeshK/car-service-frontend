@@ -14,7 +14,7 @@ const asList = (data) => (Array.isArray(data) ? data : data?.content || []);
 // plus 3 real backend wirings (invoice/estimate/job-card number prefixes actually read these now
 // — see InvoiceServiceImpl/EstimateServiceImpl/JobCardServiceImpl — not just stored and ignored).
 const SIMPLE_KEYS = [
-  'company_name', 'company_phone', 'company_whatsapp', 'company_email', 'company_address', 'company_gstin',
+  'company_name', 'company_tagline', 'company_phone', 'company_whatsapp', 'company_email', 'company_address', 'company_gstin',
   'company_logo',
   'invoice_prefix', 'estimate_prefix', 'job_card_prefix', 'default_tax_rate',
   'invoice_terms', 'invoice_footer',
@@ -130,6 +130,9 @@ export default function Settings() {
             <h6 className="mb-3">Business Information</h6>
             <Field label="Business Name">
               <input className="form-control" value={values.company_name || ''} onChange={(e) => setValue('company_name', e.target.value)} placeholder="AutoCare ERP" />
+            </Field>
+            <Field label="Tagline" hint="Shown under the business name on the login page and elsewhere — keep it short.">
+              <input className="form-control" value={values.company_tagline || ''} onChange={(e) => setValue('company_tagline', e.target.value)} placeholder="One Stop Solution" />
             </Field>
             <div className="row g-2">
               <div className="col-md-6">

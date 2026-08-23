@@ -30,8 +30,8 @@ export function collectConsoleAndNetwork(page) {
 export async function login(page, { email, password } = MANAGER) {
   await page.goto('/login');
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(password);
-  await page.getByRole('button', { name: /sign in/i }).click();
+  await page.getByLabel(/^password/i).fill(password);
+  await page.getByRole('button', { name: /^login$/i }).click();
   await page.waitForURL('**/', { timeout: 10000 }).catch(() => {});
 }
 

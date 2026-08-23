@@ -7,25 +7,28 @@ import {
   FiAlertTriangle, FiCreditCard, FiTruck, FiStar, FiClock, FiPackage, FiGift,
 } from 'react-icons/fi';
 import notificationEventsService from '../services/notificationEventsService';
+import { DASHBOARD_TONES as T } from '../utils/dashboardTheme';
 
 dayjs.extend(relativeTime);
 
 const POLL_MS = 45000;
 
+// Same tone palette as every dashboard's StatCard — a notification bell showing six unrelated
+// hues for "new customer" vs "new job" vs "reminder" was decoration, not signal.
 const TYPE_META = {
-  NEW_CUSTOMER: { icon: FiUserCheck, color: '#0ea5e9' },
-  NEW_JOB: { icon: FiClipboard, color: '#2563eb' },
-  PENDING_INSPECTION: { icon: FiClock, color: '#f59e0b' },
-  PENDING_ESTIMATE: { icon: FiFileText, color: '#f59e0b' },
-  ESTIMATE_APPROVED: { icon: FiCheckCircle, color: '#16a34a' },
-  ESTIMATE_REJECTED: { icon: FiXCircle, color: '#dc2626' },
-  ADDITIONAL_APPROVAL: { icon: FiAlertTriangle, color: '#f59e0b' },
-  PAYMENT: { icon: FiCreditCard, color: '#16a34a' },
-  READY_FOR_DELIVERY: { icon: FiTruck, color: '#16a34a' },
-  REVIEW: { icon: FiStar, color: '#f59e0b' },
-  REMINDER: { icon: FiClock, color: '#0ea5e9' },
-  LOW_STOCK: { icon: FiPackage, color: '#dc2626' },
-  OFFER_CAMPAIGN_RESULT: { icon: FiGift, color: '#8b5cf6' },
+  NEW_CUSTOMER: { icon: FiUserCheck, color: T.brand.color },
+  NEW_JOB: { icon: FiClipboard, color: T.brand.color },
+  PENDING_INSPECTION: { icon: FiClock, color: T.warning.color },
+  PENDING_ESTIMATE: { icon: FiFileText, color: T.warning.color },
+  ESTIMATE_APPROVED: { icon: FiCheckCircle, color: T.success.color },
+  ESTIMATE_REJECTED: { icon: FiXCircle, color: T.danger.color },
+  ADDITIONAL_APPROVAL: { icon: FiAlertTriangle, color: T.warning.color },
+  PAYMENT: { icon: FiCreditCard, color: T.success.color },
+  READY_FOR_DELIVERY: { icon: FiTruck, color: T.success.color },
+  REVIEW: { icon: FiStar, color: T.neutral.color },
+  REMINDER: { icon: FiClock, color: T.warning.color },
+  LOW_STOCK: { icon: FiPackage, color: T.danger.color },
+  OFFER_CAMPAIGN_RESULT: { icon: FiGift, color: T.neutral.color },
 };
 
 // Where a notification takes you when clicked. JOB_CARD/CUSTOMER referenceId is the entity

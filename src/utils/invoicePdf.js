@@ -53,17 +53,24 @@ export async function getCompanyDetails() {
   return cachedCompany;
 }
 
-// Brand blue band behind the company block, matching the app's --erp-primary / --erp-primary-dark.
-const PDF_PRIMARY = [37, 99, 235];
-const PDF_PRIMARY_DARK = [29, 78, 216];
+// Same black + gold identity as the rest of the app (--erp-charcoal / --erp-gold / --erp-primary
+// in index.css) — jsPDF can't read CSS custom properties, so these are the same values mirrored
+// as RGB triplets. PDF_ACCENT_TEXT is the darker "on white paper" gold (matches --erp-primary)
+// so headings stay legible/printer-friendly; PDF_GOLD is the brighter brand gold, used only as a
+// thin accent rule, never as a large filled/printed area (poor ink contrast for text at that tone).
+const PDF_CHARCOAL = [22, 22, 22];
+const PDF_GOLD = [212, 175, 55];
+const PDF_ACCENT_TEXT = [154, 115, 23];
 
 function drawCompanyHeader(doc, company) {
   const pageWidth = doc.internal.pageSize.getWidth();
   const lines = [company.address, [company.phone, company.email].filter(Boolean).join('  ·  '), company.gstin ? `GSTIN: ${company.gstin}` : null].filter(Boolean);
   const bandHeight = 20 + lines.length * 5;
 
-  doc.setFillColor(...PDF_PRIMARY_DARK);
+  doc.setFillColor(...PDF_CHARCOAL);
   doc.rect(0, 0, pageWidth, bandHeight, 'F');
+  doc.setFillColor(...PDF_GOLD);
+  doc.rect(0, bandHeight, pageWidth, 1.2, 'F');
 
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(15);
@@ -74,7 +81,7 @@ function drawCompanyHeader(doc, company) {
   doc.text(lines, 14, 21);
 
   doc.setTextColor(0, 0, 0);
-  return bandHeight + 8;
+  return bandHeight + 9;
 }
 
 /** Builds (but does not save) the tax invoice document. Returns the jsPDF instance. */
@@ -87,7 +94,7 @@ export async function buildInvoiceDoc(invoice, company) {
   let y = drawCompanyHeader(doc, company);
   doc.setFontSize(12);
   doc.setFont(undefined, 'bold');
-  doc.setTextColor(...PDF_PRIMARY);
+  doc.setTextColor(...PDF_ACCENT_TEXT);
   doc.text('TAX INVOICE', 14, y);
   doc.setFont(undefined, 'normal');
   doc.setTextColor(0, 0, 0);
@@ -121,7 +128,7 @@ export async function buildInvoiceDoc(invoice, company) {
         Number(l.totalAmount).toFixed(2),
       ]),
       styles: { fontSize: 9 },
-      headStyles: { fillColor: [37, 99, 235] },
+      headStyles: { fillColor: PDF_CHARCOAL, textColor: 255, lineColor: PDF_GOLD, lineWidth: 0.3 },
       margin: { left: 14, right: 14 },
     });
     y = doc.lastAutoTable.finalY + 6;
@@ -166,7 +173,7 @@ export async function buildReceiptDoc(payment, invoice, company) {
   let y = drawCompanyHeader(doc, company);
   doc.setFontSize(12);
   doc.setFont(undefined, 'bold');
-  doc.setTextColor(...PDF_PRIMARY);
+  doc.setTextColor(...PDF_ACCENT_TEXT);
   doc.text('PAYMENT RECEIPT', 14, y);
   doc.setFont(undefined, 'normal');
   doc.setTextColor(0, 0, 0);
@@ -191,7 +198,7 @@ export async function buildReceiptDoc(payment, invoice, company) {
     head: [['Payment Method', 'Reference', 'Received By', 'Amount Received']],
     body: [[payment.paymentMethod || '-', payment.transactionReference || '-', payment.receivedByName || '-', Number(payment.amount ?? 0).toFixed(2)]],
     styles: { fontSize: 9 },
-    headStyles: { fillColor: [37, 99, 235] },
+    headStyles: { fillColor: PDF_CHARCOAL, textColor: 255, lineColor: PDF_GOLD, lineWidth: 0.3 },
     margin: { left: 14, right: 14 },
   });
   y = doc.lastAutoTable.finalY + 6;
@@ -237,7 +244,7 @@ export async function buildEstimateDoc(estimate, jobCard, company) {
   let y = drawCompanyHeader(doc, company);
   doc.setFontSize(12);
   doc.setFont(undefined, 'bold');
-  doc.setTextColor(...PDF_PRIMARY);
+  doc.setTextColor(...PDF_ACCENT_TEXT);
   doc.text('ESTIMATE', 14, y);
   doc.setFont(undefined, 'normal');
   doc.setTextColor(0, 0, 0);
@@ -271,7 +278,7 @@ export async function buildEstimateDoc(estimate, jobCard, company) {
         Number(l.totalAmount).toFixed(2),
       ]),
       styles: { fontSize: 9 },
-      headStyles: { fillColor: PDF_PRIMARY },
+      headStyles: { fillColor: PDF_CHARCOAL, textColor: 255, lineColor: PDF_GOLD, lineWidth: 0.3 },
       margin: { left: 14, right: 14 },
     });
     y = doc.lastAutoTable.finalY + 6;
