@@ -27,6 +27,10 @@ import {
   FiGift,
   FiAlertCircle,
   FiActivity,
+  FiUserPlus,
+  FiCalendar as FiCalendarCheck,
+  FiClock,
+  FiDollarSign,
 } from 'react-icons/fi';
 import { FaCarSide } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
@@ -95,6 +99,19 @@ export const NAV_GROUPS = [
     ],
   },
   {
+    // HRM/payroll — SUPER_ADMIN + MANAGER (spec §23), same visibility as every other
+    // non-superAdminOnly group here. Never shown to an EMPLOYEE login: Sidebar renders a
+    // completely separate minimal nav for that role, below, bypassing NAV_GROUPS entirely.
+    title: 'Payroll',
+    items: [
+      { to: '/attendance', label: 'Attendance', icon: FiCalendarCheck },
+      { to: '/leave-requests', label: 'Leave Requests', icon: FiClock },
+      { to: '/overtime', label: 'Overtime', icon: FiClock },
+      { to: '/employee-salary', label: 'Employee Salary', icon: FiUserPlus },
+      { to: '/payroll', label: 'Payroll Runs', icon: FiDollarSign },
+    ],
+  },
+  {
     title: 'Reports',
     // Owner-level financial reporting — SUPER_ADMIN only per Phase 19 role spec.
     items: [{ to: '/reports', label: 'Reports', icon: FiPieChart, superAdminOnly: true }],
@@ -112,18 +129,25 @@ export const NAV_GROUPS = [
 ];
 
 export default function Sidebar({ collapsed, onNavigate }) {
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, isEmployee } = useAuth();
   const { companyName, tagline, logo } = useCompanyProfile();
   const visibleGroups = NAV_GROUPS.map((group) => ({
     ...group,
     items: group.items.filter((item) => !item.superAdminOnly || isSuperAdmin),
   })).filter((group) => group.items.length > 0);
 
+  // HRM/payroll — an EMPLOYEE login sees only "My Payslips", never the operational nav above
+  // (RequireOperationalAccess enforces this at the route level too — this is just so the sidebar
+  // doesn't dangle links an EMPLOYEE would immediately get redirected away from).
+  const employeeGroups = [
+    { title: 'Overview', items: [{ to: '/my-payslips', label: 'My Payslips', icon: FiDollarSign, end: true }] },
+  ];
+
   return (
     <aside className={`erp-sidebar ${collapsed ? 'erp-sidebar-collapsed' : ''}`}>
       <div className="erp-sidebar-brand">
         {logo ? (
-          <img src={logo} alt={`${companyName} logo`} className="erp-sidebar-brand-icon" style={{ objectFit: 'contain', background: '#fff' }} />
+          <img src={logo} alt={`${companyName} logo`} className="erp-sidebar-brand-icon" style={{ objectFit: 'cover' }} />
         ) : (
           <div className="erp-sidebar-brand-icon">
             <FiTool size={18} />
@@ -137,7 +161,7 @@ export default function Sidebar({ collapsed, onNavigate }) {
         )}
       </div>
       <nav className="erp-sidebar-nav">
-        {visibleGroups.map((group) => (
+        {(isEmployee ? employeeGroups : visibleGroups).map((group) => (
           <div key={group.title} className="mb-3">
             {!collapsed && <div className="erp-sidebar-group-title">{group.title}</div>}
             {group.items.map((item) => (

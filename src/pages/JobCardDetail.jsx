@@ -34,6 +34,8 @@ import additionalWorkService from '../services/additionalWorkService';
 import inspectionPhotosService from '../services/inspectionPhotosService';
 import { calculateInvoiceTotals } from '../utils/invoiceCalculations';
 import { downloadEstimatePdf, shareEstimatePdf, estimateSummaryText, getCompanyDetails } from '../utils/invoicePdf';
+import { vehicleSizeClassLabel } from '../utils/vehicleSizeClasses';
+import { inspectionCategoriesFor, qcItemsFor, INSPECTION_CATEGORY_LABELS } from '../utils/vehicleChecklists';
 import Loader from '../components/Loader';
 import ErrorPage from './ErrorPage';
 
@@ -52,15 +54,8 @@ const STATUS_BADGE = {
   QUALITY_CHECK: 'bg-warning text-dark', READY_FOR_DELIVERY: 'bg-success', DELIVERED: 'bg-success',
   CANCELLED: 'bg-danger',
 };
-// Same category strings the app has always used (kept so existing inspection_items rows still
-// match up) plus two additions from the full checklist spec: Safety, General Condition.
-// Vehicle Information / Customer Complaints / Recommendations aren't checklist rows — the first
-// two already live on the Overview/Complaint tabs, the third is the free-text rollup below.
-const INSPECTION_CATEGORIES = [
-  'Exterior', 'Interior', 'Engine', 'Electrical', 'Battery', 'Brakes', 'Suspension',
-  'Tyres', 'AC', 'Fluids', 'Lights', 'Safety', 'General Condition',
-];
-const INSPECTION_CATEGORY_LABELS = { AC: 'AC / Cooling' };
+// Inspection categories and QC items now come from ../utils/vehicleChecklists, filtered per
+// job card by its vehicle's CAR/BIKE category (a bike gets "Chain & Sprocket", not "Interior").
 const INSPECTION_STATUS_OPTIONS = [
   { value: 'GOOD', label: 'Good', tone: 'success' },
   { value: 'ATTENTION', label: 'Attention', tone: 'warning' },
@@ -83,13 +78,23 @@ const WORK_CATEGORIES = [
   { value: 'CUSTOMER_REQUESTED', label: 'Customer Requested' },
   { value: 'RECOMMENDED', label: 'Recommended' },
 ];
-const QC_ITEMS = [
-  'Engine', 'Brakes', 'Lights', 'AC', 'Tyres', 'Road Test', 'Cleaning',
-  'Tools Removed', 'Old Parts Removed/Returned', 'Customer Complaint Resolved',
-];
 const TABS = ['Overview', 'Complaint', 'Inspection', 'Estimate', 'Technician', 'Additional Work', 'Quality Check', 'Invoice'];
 
 const asList = (data) => (Array.isArray(data) ? data : data?.content || []);
+
+// The price set for this job card's vehicle size on the service, or the service's base price.
+// The advisor can still edit any line after it's added.
+const servicePriceFor = (service, jobCard) => {
+  const hit = (service?.sizePrices || []).find((sp) => sp.sizeClassCode === jobCard?.vehicleSizeClass);
+  return Number(hit?.price ?? service?.defaultPrice ?? 0);
+};
+
+const VehicleSizePricingHint = ({ jobCard }) =>
+  jobCard?.vehicleSizeClass ? (
+    <div className="form-text text-primary mt-0 mb-2">
+      {jobCard.vehicleModel || 'Vehicle'} · {vehicleSizeClassLabel(jobCard.vehicleSizeClass)} — prices for this size (editable per line)
+    </div>
+  ) : null;
 
 export default function JobCardDetail() {
   const { id } = useParams();
@@ -353,8 +358,11 @@ function InspectionTab({ jobCard, onSaved }) {
 
   const load = () => inspectionItemsService.getByJobCard(jobCard.jobCardId).then((data) => {
     const existing = asList(data);
+    // Show the categories that fit this vehicle (CAR / BIKE) plus any that already have a saved
+    // row, so re-categorising a vehicle never hides inspection work the technician already did.
+    const categories = inspectionCategoriesFor(jobCard.vehicleCategory, existing.map((i) => i.category));
     setItems(
-      INSPECTION_CATEGORIES.map((category) =>
+      categories.map((category) =>
         existing.find((i) => i.category === category) ||
         { category, status: 'NOT_CHECKED', notes: '', recommendation: '', priority: '' }
       )
@@ -706,7 +714,7 @@ function EstimateTab({ jobCard, onSaved }) {
           refId,
           workCategory,
           name: itemType === 'SERVICE' ? item.serviceName : item.productName,
-          unitPrice: itemType === 'SERVICE' ? item.defaultPrice : item.sellingPrice,
+          unitPrice: itemType === 'SERVICE' ? servicePriceFor(item, jobCard) : item.sellingPrice,
           quantity: 1,
           discount: 0,
         },
@@ -844,12 +852,13 @@ function EstimateTab({ jobCard, onSaved }) {
             ))}
           </div>
           <label className="form-label d-block">Add Service</label>
+          <VehicleSizePricingHint jobCard={jobCard} />
           <input className="form-control mb-2" placeholder="Search service..." value={serviceQuery} onChange={(e) => setServiceQuery(e.target.value)} />
           {serviceResults.length > 0 && (
             <div className="list-group mb-2">
               {serviceResults.map((s) => (
                 <button key={s.serviceId} type="button" className="list-group-item list-group-item-action d-flex justify-content-between" onClick={() => { addLine('SERVICE', s); setServiceQuery(''); }}>
-                  {s.serviceName} <strong>{Number(s.defaultPrice || 0).toFixed(2)}</strong>
+                  {s.serviceName} <strong>{servicePriceFor(s, jobCard).toFixed(2)}</strong>
                 </button>
               ))}
             </div>
@@ -953,11 +962,16 @@ function EstimateTab({ jobCard, onSaved }) {
                     {e.validUntil && ` · Valid until ${dayjs(e.validUntil).format('DD MMM YYYY')}`}
                   </div>
                   {e.status === 'PENDING' && requestingChangesFor !== e.estimateId && (
-                    <div className="d-flex gap-2 mt-1">
-                      <button className="btn btn-sm btn-success" onClick={() => approve(e.estimateId)}>Approve</button>
-                      <button className="btn btn-sm btn-outline-warning" onClick={() => { setRequestingChangesFor(e.estimateId); setChangeNotes(''); }}>Request Changes</button>
-                      <button className="btn btn-sm btn-outline-danger" onClick={() => reject(e.estimateId)}>Reject</button>
-                    </div>
+                    <>
+                      <div className="alert alert-warning py-1 px-2 small mt-1 mb-1">
+                        ⚠ Call the customer and get their approval before you Approve this estimate.
+                      </div>
+                      <div className="d-flex gap-2 mt-1">
+                        <button className="btn btn-sm btn-success" onClick={() => approve(e.estimateId)}>Approve</button>
+                        <button className="btn btn-sm btn-outline-warning" onClick={() => { setRequestingChangesFor(e.estimateId); setChangeNotes(''); }}>Request Changes</button>
+                        <button className="btn btn-sm btn-outline-danger" onClick={() => reject(e.estimateId)}>Reject</button>
+                      </div>
+                    </>
                   )}
                   {requestingChangesFor === e.estimateId && (
                     <div className="mt-2">
@@ -1210,7 +1224,7 @@ function AdditionalWorkTab({ jobCard, onSaved }) {
           itemType,
           refId,
           name: itemType === 'SERVICE' ? item.serviceName : item.productName,
-          unitPrice: itemType === 'SERVICE' ? item.defaultPrice : item.sellingPrice,
+          unitPrice: itemType === 'SERVICE' ? servicePriceFor(item, jobCard) : item.sellingPrice,
           quantity: 1,
           discount: 0,
         },
@@ -1277,12 +1291,13 @@ function AdditionalWorkTab({ jobCard, onSaved }) {
       <div className="col-lg-7">
         <div className="erp-card p-3 mb-3">
           <label className="form-label">Add Service</label>
+          <VehicleSizePricingHint jobCard={jobCard} />
           <input className="form-control mb-2" placeholder="Search service..." value={serviceQuery} onChange={(e) => setServiceQuery(e.target.value)} />
           {serviceResults.length > 0 && (
             <div className="list-group mb-2">
               {serviceResults.map((s) => (
                 <button key={s.serviceId} type="button" className="list-group-item list-group-item-action d-flex justify-content-between" onClick={() => { addLine('SERVICE', s); setServiceQuery(''); }}>
-                  {s.serviceName} <strong>{Number(s.defaultPrice || 0).toFixed(2)}</strong>
+                  {s.serviceName} <strong>{servicePriceFor(s, jobCard).toFixed(2)}</strong>
                 </button>
               ))}
             </div>
@@ -1364,10 +1379,15 @@ function AdditionalWorkTab({ jobCard, onSaved }) {
                 </div>
               )}
               {r.status === 'PENDING' && (
-                <div className="d-flex gap-2 mt-1">
-                  <button className="btn btn-sm btn-success" onClick={() => approve(r.additionalWorkRequestId)}>Approve</button>
-                  <button className="btn btn-sm btn-outline-danger" onClick={() => reject(r.additionalWorkRequestId)}>Reject</button>
-                </div>
+                <>
+                  <div className="alert alert-warning py-1 px-2 small mt-1 mb-1">
+                    ⚠ Call the customer and get their approval before you Approve.
+                  </div>
+                  <div className="d-flex gap-2 mt-1">
+                    <button className="btn btn-sm btn-success" onClick={() => approve(r.additionalWorkRequestId)}>Approve</button>
+                    <button className="btn btn-sm btn-outline-danger" onClick={() => reject(r.additionalWorkRequestId)}>Reject</button>
+                  </div>
+                </>
               )}
             </div>
           ))}
@@ -1379,8 +1399,9 @@ function AdditionalWorkTab({ jobCard, onSaved }) {
 
 /* ---------------- Quality Check ---------------- */
 function QualityCheckTab({ jobCard, onSaved }) {
+  const qcItems = useMemo(() => qcItemsFor(jobCard.vehicleCategory), [jobCard.vehicleCategory]);
   const [checks, setChecks] = useState(null);
-  const [checklist, setChecklist] = useState(() => Object.fromEntries(QC_ITEMS.map((i) => [i, false])));
+  const [checklist, setChecklist] = useState(() => Object.fromEntries(qcItems.map((i) => [i, false])));
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -1412,7 +1433,7 @@ function QualityCheckTab({ jobCard, onSaved }) {
       <div className="col-lg-7">
         <div className="erp-card p-3">
           <h6 className="mb-3">Checklist</h6>
-          {QC_ITEMS.map((item) => (
+          {qcItems.map((item) => (
             <div className="form-check" key={item}>
               <input
                 className="form-check-input"

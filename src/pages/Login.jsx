@@ -62,35 +62,45 @@ export default function Login() {
             </svg>
 
             <div className="auth-brand-content">
-              {logo ? (
-                <img
-                  src={logo}
-                  alt={`${companyName} logo`}
-                  style={{ maxWidth: 84, maxHeight: 64, objectFit: 'contain', margin: '0 0 14px' }}
-                />
-              ) : (
-                <div
-                  className="d-flex align-items-center justify-content-center mb-3"
-                  style={{
-                    width: 52, height: 52, borderRadius: '50%',
-                    background: 'linear-gradient(135deg, var(--brand-gold-light), var(--brand-gold))',
-                  }}
-                >
-                  <FiTool size={24} color="#161616" />
-                </div>
-              )}
+              {/* Logo + name + tagline centered as one brand block; "Welcome Back!" below stays
+                  left-aligned as body copy — centering everything read as one big undifferentiated
+                  block. Logo sized up from 72px since centered on its own it read small/lost. */}
+              <div className="d-flex flex-column align-items-center text-center">
+                {logo ? (
+                  <img
+                    src={logo}
+                    alt={`${companyName} logo`}
+                    style={{
+                      width: 104, height: 104, borderRadius: '50%',
+                      objectFit: 'cover', margin: '0 0 16px',
+                      border: '3px solid var(--brand-gold)',
+                      boxShadow: '0 4px 18px rgba(212, 175, 55, 0.35)',
+                    }}
+                  />
+                ) : (
+                  <div
+                    className="d-flex align-items-center justify-content-center mb-3"
+                    style={{
+                      width: 72, height: 72, borderRadius: '50%',
+                      background: 'linear-gradient(135deg, var(--brand-gold-light), var(--brand-gold))',
+                    }}
+                  >
+                    <FiTool size={32} color="#161616" />
+                  </div>
+                )}
 
-              <div className="fw-bold text-white text-uppercase" style={{ fontSize: '0.9rem', letterSpacing: '0.04em' }}>
-                {companyName}
-              </div>
-              {(tagline || !hasCustomName) && (
-                <div
-                  className="fw-semibold text-uppercase mt-1"
-                  style={{ color: 'var(--brand-gold-light)', letterSpacing: '0.12em', fontSize: '0.66rem' }}
-                >
-                  {tagline || 'Sign in to continue'}
+                <div className="fw-bold text-white text-uppercase" style={{ fontSize: '0.9rem', letterSpacing: '0.04em' }}>
+                  {companyName}
                 </div>
-              )}
+                {(tagline || !hasCustomName) && (
+                  <div
+                    className="fw-semibold text-uppercase mt-1"
+                    style={{ color: 'var(--brand-gold-light)', letterSpacing: '0.12em', fontSize: '0.66rem' }}
+                  >
+                    {tagline || 'Sign in to continue'}
+                  </div>
+                )}
+              </div>
 
               <h2 className="text-white fw-bold mt-4 mb-2">Welcome Back!</h2>
               <p className="mb-0" style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.85rem', maxWidth: 240 }}>

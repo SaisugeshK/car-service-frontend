@@ -2,11 +2,13 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import Modal from './Modal';
 import vehiclesService from '../services/vehiclesService';
+import { sizeClassesFor } from '../utils/vehicleSizeClasses';
+import { bodyTypeOptions, fuelTypeOptions } from '../utils/vehicleOptions';
 
 const emptyForm = () => ({
   make: '', vehicleModel: '', variant: '', registrationNumber: '', odometer: '',
   vehicleType: '', fuelType: '', color: '', year: '', chassisNumber: '', engineNumber: '', notes: '',
-  vehicleCategory: '', insuranceCompany: '', insuranceExpiry: '', pucExpiry: '',
+  vehicleCategory: '', sizeClass: '', insuranceCompany: '', insuranceExpiry: '', pucExpiry: '',
 });
 
 // Vehicle-only — the customer is already known, so we never ask for it again (spec: existing
@@ -16,6 +18,9 @@ export default function AddVehicleModal({ show, customer, onClose, onCreated }) 
   const [saving, setSaving] = useState(false);
 
   const set = (patch) => setForm((prev) => ({ ...prev, ...patch }));
+  // Category drives the type/size/fuel choices — reset them when it changes so a stale
+  // car value can't stay on a bike (and vice versa).
+  const setCategory = (vehicleCategory) => set({ vehicleCategory, vehicleType: '', fuelType: '', sizeClass: '' });
 
   const handleClose = () => {
     setForm(emptyForm());
@@ -25,6 +30,7 @@ export default function AddVehicleModal({ show, customer, onClose, onCreated }) 
   const save = async () => {
     if (!form.vehicleModel.trim()) return toast.error('Vehicle model is required');
     if (!form.registrationNumber.trim()) return toast.error('Registration number is required');
+    if (!form.vehicleCategory) return toast.error('Select the vehicle category — Car or Bike');
 
     setSaving(true);
     try {
@@ -42,6 +48,7 @@ export default function AddVehicleModal({ show, customer, onClose, onCreated }) 
         chassisNumber: form.chassisNumber || null,
         engineNumber: form.engineNumber || null,
         vehicleCategory: form.vehicleCategory || null,
+        sizeClass: form.sizeClass || null,
         insuranceCompany: form.insuranceCompany || null,
         insuranceExpiry: form.insuranceExpiry || null,
         pucExpiry: form.pucExpiry || null,
@@ -84,6 +91,14 @@ export default function AddVehicleModal({ show, customer, onClose, onCreated }) 
           <input className="form-control" value={form.vehicleModel} onChange={(e) => set({ vehicleModel: e.target.value })} placeholder="e.g. A4" />
         </div>
         <div className="col-md-6">
+          <label className="form-label">Category (Car / Bike) *</label>
+          <select className="form-select" value={form.vehicleCategory} onChange={(e) => setCategory(e.target.value)}>
+            <option value="">Select...</option>
+            <option value="CAR">Car</option>
+            <option value="BIKE">Bike</option>
+          </select>
+        </div>
+        <div className="col-md-6">
           <label className="form-label">Variant</label>
           <input className="form-control" value={form.variant} onChange={(e) => set({ variant: e.target.value })} />
         </div>
@@ -96,25 +111,24 @@ export default function AddVehicleModal({ show, customer, onClose, onCreated }) 
           <input type="number" min="0" className="form-control" value={form.odometer} onChange={(e) => set({ odometer: e.target.value })} />
         </div>
         <div className="col-md-6">
-          <label className="form-label">Category</label>
-          <select className="form-select" value={form.vehicleCategory} onChange={(e) => set({ vehicleCategory: e.target.value })}>
-            <option value="">Select...</option>
-            <option value="CAR">Car</option>
-            <option value="BIKE">Bike</option>
+          <label className="form-label">Vehicle Type</label>
+          <select className="form-select" value={form.vehicleType} onChange={(e) => set({ vehicleType: e.target.value })} disabled={!form.vehicleCategory}>
+            <option value="">{form.vehicleCategory ? 'Select...' : 'Select category first'}</option>
+            {bodyTypeOptions(form.vehicleCategory).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
         <div className="col-md-6">
-          <label className="form-label">Vehicle Type</label>
-          <select className="form-select" value={form.vehicleType} onChange={(e) => set({ vehicleType: e.target.value })}>
-            <option value="">Select...</option>
-            {['Hatchback', 'Sedan', 'SUV', 'Van', 'Other'].map((t) => <option key={t} value={t}>{t}</option>)}
+          <label className="form-label">Size (affects service pricing)</label>
+          <select className="form-select" value={form.sizeClass} onChange={(e) => set({ sizeClass: e.target.value })} disabled={!form.vehicleCategory}>
+            <option value="">{form.vehicleCategory ? 'Select...' : 'Select category first'}</option>
+            {sizeClassesFor(form.vehicleCategory).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
         <div className="col-md-6">
           <label className="form-label">Fuel Type</label>
-          <select className="form-select" value={form.fuelType} onChange={(e) => set({ fuelType: e.target.value })}>
-            <option value="">Select...</option>
-            {['Petrol', 'Diesel', 'CNG', 'Electric', 'Hybrid'].map((t) => <option key={t} value={t}>{t}</option>)}
+          <select className="form-select" value={form.fuelType} onChange={(e) => set({ fuelType: e.target.value })} disabled={!form.vehicleCategory}>
+            <option value="">{form.vehicleCategory ? 'Select...' : 'Select category first'}</option>
+            {fuelTypeOptions(form.vehicleCategory).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
         <div className="col-md-6">

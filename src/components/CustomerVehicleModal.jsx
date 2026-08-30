@@ -3,13 +3,15 @@ import toast from 'react-hot-toast';
 import Modal from './Modal';
 import customersService from '../services/customersService';
 import vehiclesService from '../services/vehiclesService';
+import { sizeClassesFor } from '../utils/vehicleSizeClasses';
+import { bodyTypeOptions, fuelTypeOptions } from '../utils/vehicleOptions';
 
 const emptyForm = () => ({
   customerName: '', phone: '', whatsappNumber: '', alternateMobile: '', email: '',
   address: '', city: '', state: '', pincode: '', gstin: '', customerNotes: '',
   make: '', vehicleModel: '', variant: '', registrationNumber: '', odometer: '',
   vehicleType: '', fuelType: '', color: '', year: '', chassisNumber: '', engineNumber: '', vehicleNotes: '',
-  vehicleCategory: '', insuranceCompany: '', insuranceExpiry: '', pucExpiry: '',
+  vehicleCategory: '', sizeClass: '', insuranceCompany: '', insuranceExpiry: '', pucExpiry: '',
 });
 
 /**
@@ -24,6 +26,8 @@ export default function CustomerVehicleModal({ show, onClose, onCreated }) {
   const [saving, setSaving] = useState(false);
 
   const set = (patch) => setForm((prev) => ({ ...prev, ...patch }));
+  // Category drives type/size/fuel — clear them when it flips so a car value can't linger on a bike.
+  const setCategory = (vehicleCategory) => set({ vehicleCategory, vehicleType: '', fuelType: '', sizeClass: '' });
 
   const handleClose = () => {
     setForm(emptyForm());
@@ -35,6 +39,7 @@ export default function CustomerVehicleModal({ show, onClose, onCreated }) {
     if (!form.phone.trim()) return toast.error('Mobile number is required');
     if (!form.vehicleModel.trim()) return toast.error('Vehicle model is required');
     if (!form.registrationNumber.trim()) return toast.error('Registration number is required');
+    if (!form.vehicleCategory) return toast.error('Select the vehicle category — Car or Bike');
 
     setSaving(true);
     try {
@@ -67,6 +72,7 @@ export default function CustomerVehicleModal({ show, onClose, onCreated }) {
         chassisNumber: form.chassisNumber || null,
         engineNumber: form.engineNumber || null,
         vehicleCategory: form.vehicleCategory || null,
+        sizeClass: form.sizeClass || null,
         insuranceCompany: form.insuranceCompany || null,
         insuranceExpiry: form.insuranceExpiry || null,
         pucExpiry: form.pucExpiry || null,
@@ -159,6 +165,14 @@ export default function CustomerVehicleModal({ show, onClose, onCreated }) {
           <input id="cvm-model" className="form-control" value={form.vehicleModel} onChange={(e) => set({ vehicleModel: e.target.value })} placeholder="e.g. Creta" />
         </div>
         <div className="col-md-6">
+          <label className="form-label" htmlFor="cvm-category">Category (Car / Bike) *</label>
+          <select id="cvm-category" className="form-select" value={form.vehicleCategory} onChange={(e) => setCategory(e.target.value)}>
+            <option value="">Select...</option>
+            <option value="CAR">Car</option>
+            <option value="BIKE">Bike</option>
+          </select>
+        </div>
+        <div className="col-md-6">
           <label className="form-label" htmlFor="cvm-variant">Variant</label>
           <input id="cvm-variant" className="form-control" value={form.variant} onChange={(e) => set({ variant: e.target.value })} />
         </div>
@@ -171,25 +185,24 @@ export default function CustomerVehicleModal({ show, onClose, onCreated }) {
           <input id="cvm-odometer" type="number" min="0" className="form-control" value={form.odometer} onChange={(e) => set({ odometer: e.target.value })} />
         </div>
         <div className="col-md-6">
-          <label className="form-label" htmlFor="cvm-category">Category</label>
-          <select id="cvm-category" className="form-select" value={form.vehicleCategory} onChange={(e) => set({ vehicleCategory: e.target.value })}>
-            <option value="">Select...</option>
-            <option value="CAR">Car</option>
-            <option value="BIKE">Bike</option>
+          <label className="form-label" htmlFor="cvm-vehicleType">Vehicle Type</label>
+          <select id="cvm-vehicleType" className="form-select" value={form.vehicleType} onChange={(e) => set({ vehicleType: e.target.value })} disabled={!form.vehicleCategory}>
+            <option value="">{form.vehicleCategory ? 'Select...' : 'Select category first'}</option>
+            {bodyTypeOptions(form.vehicleCategory).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
         <div className="col-md-6">
-          <label className="form-label" htmlFor="cvm-vehicleType">Vehicle Type</label>
-          <select id="cvm-vehicleType" className="form-select" value={form.vehicleType} onChange={(e) => set({ vehicleType: e.target.value })}>
-            <option value="">Select...</option>
-            {['Hatchback', 'Sedan', 'SUV', 'Van', 'Other'].map((t) => <option key={t} value={t}>{t}</option>)}
+          <label className="form-label" htmlFor="cvm-sizeClass">Size (affects service pricing)</label>
+          <select id="cvm-sizeClass" className="form-select" value={form.sizeClass} onChange={(e) => set({ sizeClass: e.target.value })} disabled={!form.vehicleCategory}>
+            <option value="">{form.vehicleCategory ? 'Select...' : 'Select category first'}</option>
+            {sizeClassesFor(form.vehicleCategory).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
         <div className="col-md-6">
           <label className="form-label" htmlFor="cvm-fuelType">Fuel Type</label>
-          <select id="cvm-fuelType" className="form-select" value={form.fuelType} onChange={(e) => set({ fuelType: e.target.value })}>
-            <option value="">Select...</option>
-            {['Petrol', 'Diesel', 'CNG', 'Electric', 'Hybrid'].map((t) => <option key={t} value={t}>{t}</option>)}
+          <select id="cvm-fuelType" className="form-select" value={form.fuelType} onChange={(e) => set({ fuelType: e.target.value })} disabled={!form.vehicleCategory}>
+            <option value="">{form.vehicleCategory ? 'Select...' : 'Select category first'}</option>
+            {fuelTypeOptions(form.vehicleCategory).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
         <div className="col-md-6">

@@ -68,10 +68,14 @@ export function AuthProvider({ children }) {
   // MANAGER-level — least privilege, not a crash — until a SUPER_ADMIN assigns one via Users.
   const role = user?.role || (user ? 'MANAGER' : null);
   const isSuperAdmin = role === 'SUPER_ADMIN';
+  // HRM/payroll — EMPLOYEE is a real seeded role (RoleSeeder.java) for staff who log in to see
+  // only their own payslip; never backfilled onto a roleless account, so this never accidentally
+  // catches an existing SUPER_ADMIN/MANAGER user.
+  const isEmployee = role === 'EMPLOYEE';
 
   const value = useMemo(
-    () => ({ user, role, isSuperAdmin, isAuthenticated, initializing, login, logout }),
-    [user, role, isSuperAdmin, isAuthenticated, initializing]
+    () => ({ user, role, isSuperAdmin, isEmployee, isAuthenticated, initializing, login, logout }),
+    [user, role, isSuperAdmin, isEmployee, isAuthenticated, initializing]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

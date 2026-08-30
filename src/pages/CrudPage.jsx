@@ -101,7 +101,7 @@ export default function CrudPage({ config }) {
 
   const openEdit = (row) => {
     setEditingRow(row);
-    reset({ ...defaultValues, ...row });
+    reset({ ...defaultValues, ...(config.transformRow ? config.transformRow(row) : row) });
     setShowForm(true);
   };
 
@@ -133,17 +133,21 @@ export default function CrudPage({ config }) {
       }
     });
 
+    // Lets a page reshape the form values into the API body (e.g. fold a priceGrid object
+    // into a list). Returns the object actually sent.
+    const body = config.transformPayload ? config.transformPayload(payload, { editingRow }) : payload;
+
     let saved;
     if (editingRow) {
       const recordId = getRecordId(editingRow);
       if (recordId == null) {
         throw new Error('Unable to determine record ID for update');
       }
-      saved = await update(recordId, payload);
+      saved = await update(recordId, body);
     } else {
-      saved = await create(payload);
+      saved = await create(body);
     }
-    if (config.onAfterSave) await config.onAfterSave(saved, payload);
+    if (config.onAfterSave) await config.onAfterSave(saved, body);
     setShowForm(false);
   };
 
@@ -247,13 +251,33 @@ export default function CrudPage({ config }) {
               <div key={f.name} className={f.fullWidth || f.type === 'note' ? 'col-12' : 'col-md-6'}>
                 {f.type === 'note' ? (
                   <div className="form-text mt-0 mb-3">{f.text}</div>
+                ) : f.type === 'priceGrid' ? (
+                  <div>
+                    <label className="form-label">{f.label}{f.required && ' *'}</label>
+                    <div className="d-flex flex-wrap gap-2">
+                      {(typeof f.options === 'function' ? f.options(watchedValues) : (f.options || [])).map((o) => (
+                        <div key={o.value} style={{ width: 130 }}>
+                          <label className="form-text mb-0 d-block" htmlFor={`${f.name}-${o.value}`}>{o.label}</label>
+                          <input
+                            id={`${f.name}-${o.value}`}
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            className="form-control form-control-sm"
+                            {...register(`${f.name}.${o.value}`)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    {f.help && <div className="form-text mt-1">{f.help}</div>}
+                  </div>
                 ) : f.type === 'select' ? (
                   <FormSelect
                     label={f.label}
                     name={f.name}
                     register={register}
                     error={errors[f.name]}
-                    options={f.options || []}
+                    options={typeof f.options === 'function' ? f.options(watchedValues) : (f.options || [])}
                     required={f.required}
                     valueKey={f.valueKey || 'value'}
                     labelKey={f.labelKey || 'label'}

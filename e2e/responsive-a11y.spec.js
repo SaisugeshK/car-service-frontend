@@ -18,6 +18,14 @@ const PAGES = [
   { name: 'Job Cards (table)', path: '/job-cards', auth: true },
   { name: 'Estimates', path: '/estimates', auth: true },
   { name: 'Invoices', path: '/invoices', auth: true },
+  // HRM/payroll — added during the pre-deployment test pass; didn't exist when this suite was
+  // first written. Same pattern as every other row above, nothing HRM-specific about the check.
+  { name: 'Attendance', path: '/attendance', auth: true },
+  { name: 'Leave Requests', path: '/leave-requests', auth: true },
+  { name: 'Overtime', path: '/overtime', auth: true },
+  { name: 'Employee Salary', path: '/employee-salary', auth: true },
+  { name: 'Payroll Runs', path: '/payroll', auth: true },
+  { name: 'My Payslips', path: '/my-payslips', auth: true },
 ];
 
 for (const vp of VIEWPORTS) {

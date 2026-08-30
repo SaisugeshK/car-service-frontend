@@ -132,7 +132,8 @@ export const vehicleSchema = yup.object({
   year: yup.number().typeError('Enter a valid year').nullable(),
   chassisNumber: yup.string().nullable(),
   engineNumber: yup.string().nullable(),
-  vehicleCategory: yup.string().nullable(),
+  vehicleCategory: yup.string().required('Select Car or Bike'),
+  sizeClass: yup.string().nullable(),
   insuranceCompany: yup.string().nullable(),
   insuranceExpiry: yup.string().nullable(),
   pucExpiry: yup.string().nullable(),
@@ -151,8 +152,10 @@ export const serviceMasterSchema = yup.object({
     .min(0)
     .nullable()
     .transform((v) => (Number.isNaN(v) ? null : v)),
-  vehicleType: yup.string().nullable(),
+  vehicleType: yup.string().required('Select Car or Bike'),
   status: yup.string().required('Status is required'),
+  // sizePrices is a { CODE: amount } object collected by the priceGrid field — validated in the page.
+  sizePrices: yup.mixed().nullable(),
 });
 
 export const unitSchema = yup.object({
@@ -354,6 +357,41 @@ export const complaintSchema = yup.object({
   status: yup.string().nullable(),
   resolution: yup.string().nullable(),
   resolutionDate: yup.string().nullable(),
+});
+
+export const attendanceSchema = yup.object({
+  userId: yup.number().typeError('Employee is required').required('Employee is required'),
+  attendanceDate: yup.string().required('Date is required'),
+  status: yup.string().required('Status is required'),
+  notes: yup.string().nullable(),
+});
+
+export const leaveRequestSchema = yup.object({
+  userId: yup.number().typeError('Employee is required').required('Employee is required'),
+  leaveType: yup.string().required('Leave type is required'),
+  startDate: yup.string().required('Start date is required'),
+  endDate: yup.string().required('End date is required'),
+  reason: yup.string().nullable(),
+});
+
+export const overtimeSchema = yup.object({
+  userId: yup.number().typeError('Employee is required').required('Employee is required'),
+  workDate: yup.string().required('Date is required'),
+  hours: yup.number().typeError('Enter a valid number of hours').positive('Must be positive').required('Hours is required'),
+  rate: yup.number().typeError('Enter a valid rate').min(0, 'Cannot be negative').required('Rate is required'),
+  notes: yup.string().nullable(),
+});
+
+// Money fields are optional here (backend defaults hra/otherAllowances/deductions to 0), but
+// never negative — matches the backend's own rejectNegative(...) validation.
+export const salaryConfigSchema = yup.object({
+  userId: yup.number().typeError('Employee is required').required('Employee is required'),
+  basicPay: yup.number().typeError('Enter a valid amount').min(0, 'Cannot be negative').required('Basic pay is required'),
+  hra: yup.number().typeError('Enter a valid amount').min(0, 'Cannot be negative').nullable().transform((v) => (Number.isNaN(v) ? null : v)),
+  otherAllowances: yup.number().typeError('Enter a valid amount').min(0, 'Cannot be negative').nullable().transform((v) => (Number.isNaN(v) ? null : v)),
+  deductions: yup.number().typeError('Enter a valid amount').min(0, 'Cannot be negative').nullable().transform((v) => (Number.isNaN(v) ? null : v)),
+  effectiveFrom: yup.string().required('Effective from date is required'),
+  notes: yup.string().nullable(),
 });
 
 export const followUpSchema = yup.object({

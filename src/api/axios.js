@@ -130,8 +130,6 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Backend refresh endpoint is not implemented yet; this is wired so it
-        // works the moment POST /api/auth/refresh exists.
         const refreshResponse = await axios.post(`${BASE_URL}/auth/refresh`, {
           refreshToken,
         });

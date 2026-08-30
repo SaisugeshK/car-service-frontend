@@ -4,6 +4,7 @@ import productsService from '../services/productsService';
 import categoriesService from '../services/categoriesService';
 import productTaxesService from '../services/productTaxesService';
 import { productSchema } from '../utils/validationSchemas';
+import { vehicleTypeSegments } from '../utils/vehicleTypeSegments';
 import Loader from '../components/Loader';
 import ErrorPage from './ErrorPage';
 
@@ -93,13 +94,7 @@ export default function Products() {
       status: 'ACTIVE',
     },
     schema: productSchema,
-    // Null/blank vehicleType = applies to both, per the model's convention — so it still shows
-    // under the Car and Bike segments, not just All.
-    segments: [
-      { value: 'ALL', label: 'All' },
-      { value: 'CAR', label: 'Car', predicate: (row) => !row.vehicleType || row.vehicleType === 'CAR' || row.vehicleType === 'BOTH' },
-      { value: 'BIKE', label: 'Bike', predicate: (row) => !row.vehicleType || row.vehicleType === 'BIKE' || row.vehicleType === 'BOTH' },
-    ],
+    segments: vehicleTypeSegments,
     columns: [
       { key: 'productId', label: 'ID', sortable: true },
       { key: 'productName', label: 'Product', sortable: true },

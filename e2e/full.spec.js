@@ -1,7 +1,11 @@
 import { test, expect } from '@playwright/test';
-import { login, logout, collectConsoleAndNetwork, MANAGER, promoteTestUserToSuperAdmin, demoteTestUserToManager } from './helpers.js';
+import { login, logout, collectConsoleAndNetwork, MANAGER, promoteTestUserToSuperAdmin, demoteTestUserToManager, ensureSeedServices } from './helpers.js';
 
 const uniq = () => Date.now().toString().slice(-8);
+
+test.beforeAll(async () => {
+  await ensureSeedServices();
+});
 
 test.describe('1. Login', () => {
   test('valid login redirects to dashboard', async ({ page }) => {
@@ -215,6 +219,7 @@ test.describe('3. Tables, search, forms — Customers page', () => {
     await page.getByLabel('Make *').fill('Honda');
     await page.getByLabel('Model *').fill('City');
     await page.getByLabel('Registration Number *').fill(`E2E-REG-${id}`);
+    await page.getByLabel(/Category \(Car \/ Bike\)/i).selectOption('CAR');
     await page.getByRole('button', { name: /save customer & vehicle/i }).click();
 
     await expect(page).toHaveURL(/\/customers\/\d+/, { timeout: 8000 });
@@ -239,6 +244,7 @@ test.describe('4. Complete E2E workflow — Login through Review', () => {
     await page.getByLabel('Make *').fill('Honda');
     await page.getByLabel('Model *').fill('City');
     await page.getByLabel('Registration Number *').fill(reg);
+    await page.getByLabel(/Category \(Car \/ Bike\)/i).selectOption('CAR');
     await page.getByRole('button', { name: /save customer & vehicle/i }).click();
     await expect(page).toHaveURL(/\/customers\/\d+/, { timeout: 8000 });
 
@@ -347,6 +353,7 @@ test.describe('5. Negative E2E — rejected estimate must not be billable', () =
     await page.getByLabel('Make *').fill('Honda');
     await page.getByLabel('Model *').fill('Amaze');
     await page.getByLabel('Registration Number *').fill(reg);
+    await page.getByLabel(/Category \(Car \/ Bike\)/i).selectOption('CAR');
     await page.getByRole('button', { name: /save customer & vehicle/i }).click();
     await expect(page).toHaveURL(/\/customers\/\d+/, { timeout: 8000 });
 
@@ -388,6 +395,7 @@ test.describe('7. Stale undecided estimate must not block an already-approved on
     await page.getByLabel('Make *').fill('Honda');
     await page.getByLabel('Model *').fill('Elevate');
     await page.getByLabel('Registration Number *').fill(reg);
+    await page.getByLabel(/Category \(Car \/ Bike\)/i).selectOption('CAR');
     await page.getByRole('button', { name: /save customer & vehicle/i }).click();
     await expect(page).toHaveURL(/\/customers\/\d+/, { timeout: 8000 });
 
@@ -448,6 +456,7 @@ test.describe('9. Invoice summary — approved estimate + approved additional wo
     await page.getByLabel('Make *').fill('Honda');
     await page.getByLabel('Model *').fill('Jazz');
     await page.getByLabel('Registration Number *').fill(reg);
+    await page.getByLabel(/Category \(Car \/ Bike\)/i).selectOption('CAR');
     await page.getByRole('button', { name: /save customer & vehicle/i }).click();
     await expect(page).toHaveURL(/\/customers\/\d+/, { timeout: 8000 });
 
@@ -536,6 +545,7 @@ test.describe('9. Invoice summary — approved estimate + approved additional wo
     await page.getByLabel('Make *').fill('Honda');
     await page.getByLabel('Model *').fill('Brio');
     await page.getByLabel('Registration Number *').fill(reg);
+    await page.getByLabel(/Category \(Car \/ Bike\)/i).selectOption('CAR');
     await page.getByRole('button', { name: /save customer & vehicle/i }).click();
     await expect(page).toHaveURL(/\/customers\/\d+/, { timeout: 8000 });
 
@@ -576,6 +586,7 @@ test.describe('8. Duplicate-action protection (UI)', () => {
     await page.getByLabel('Make *').fill('Honda');
     await page.getByLabel('Model *').fill('WRV');
     await page.getByLabel('Registration Number *').fill(reg);
+    await page.getByLabel(/Category \(Car \/ Bike\)/i).selectOption('CAR');
     await page.getByRole('button', { name: /save customer & vehicle/i }).click();
     await expect(page).toHaveURL(/\/customers\/\d+/, { timeout: 8000 });
 

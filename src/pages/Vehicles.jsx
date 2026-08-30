@@ -3,6 +3,8 @@ import CrudPage from './CrudPage';
 import vehiclesService from '../services/vehiclesService';
 import customersService from '../services/customersService';
 import { vehicleSchema } from '../utils/validationSchemas';
+import { sizeClassesFor, vehicleSizeClassLabel } from '../utils/vehicleSizeClasses';
+import { bodyTypeOptions, fuelTypeOptions } from '../utils/vehicleOptions';
 import Loader from '../components/Loader';
 import ErrorPage from './ErrorPage';
 
@@ -42,6 +44,7 @@ export default function Vehicles() {
       chassisNumber: '',
       engineNumber: '',
       vehicleCategory: '',
+      sizeClass: '',
       insuranceCompany: '',
       insuranceExpiry: '',
       pucExpiry: '',
@@ -76,6 +79,11 @@ export default function Vehicles() {
         render: (row) => (row.odometer != null ? `${row.odometer} km` : '—'),
       },
       { key: 'vehicleType', label: 'Type' },
+      {
+        key: 'sizeClass',
+        label: 'Size',
+        render: (row) => (row.sizeClass ? vehicleSizeClassLabel(row.sizeClass) : '—'),
+      },
       { key: 'fuelType', label: 'Fuel' },
     ],
     fields: [
@@ -90,41 +98,39 @@ export default function Vehicles() {
       },
       { name: 'make', label: 'Make', placeholder: 'e.g. Hyundai' },
       { name: 'vehicleModel', label: 'Model', required: true, placeholder: 'e.g. Creta' },
-      { name: 'variant', label: 'Variant', placeholder: 'e.g. SX(O)' },
-      { name: 'registrationNumber', label: 'Registration No.', required: true, placeholder: 'e.g. TN 09 AB 4521' },
       {
         name: 'vehicleCategory',
         label: 'Category (Car / Bike)',
         type: 'select',
+        required: true,
         options: [
           { value: 'CAR', label: 'Car' },
           { value: 'BIKE', label: 'Bike' },
         ],
       },
+      { name: 'variant', label: 'Variant', placeholder: 'e.g. SX(O)' },
+      { name: 'registrationNumber', label: 'Registration No.', required: true, placeholder: 'e.g. TN 09 AB 4521' },
       { name: 'odometer', label: 'Current Odometer (km)', type: 'number' },
       {
         name: 'vehicleType',
         label: 'Vehicle Type',
         type: 'select',
-        options: [
-          { value: 'Hatchback', label: 'Hatchback' },
-          { value: 'Sedan', label: 'Sedan' },
-          { value: 'SUV', label: 'SUV' },
-          { value: 'Van', label: 'Van' },
-          { value: 'Other', label: 'Other' },
-        ],
+        showIf: (v) => !!v.vehicleCategory,
+        options: (v) => bodyTypeOptions(v.vehicleCategory),
+      },
+      {
+        name: 'sizeClass',
+        label: 'Size (affects service pricing)',
+        type: 'select',
+        showIf: (v) => !!v.vehicleCategory,
+        options: (v) => sizeClassesFor(v.vehicleCategory),
       },
       {
         name: 'fuelType',
         label: 'Fuel Type',
         type: 'select',
-        options: [
-          { value: 'Petrol', label: 'Petrol' },
-          { value: 'Diesel', label: 'Diesel' },
-          { value: 'CNG', label: 'CNG' },
-          { value: 'Electric', label: 'Electric' },
-          { value: 'Hybrid', label: 'Hybrid' },
-        ],
+        showIf: (v) => !!v.vehicleCategory,
+        options: (v) => fuelTypeOptions(v.vehicleCategory),
       },
       { name: 'color', label: 'Color' },
       { name: 'year', label: 'Year', type: 'number' },

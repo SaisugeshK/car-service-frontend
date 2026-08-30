@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { FiPlus, FiArrowRightCircle } from 'react-icons/fi';
 import appointmentsService from '../services/appointmentsService';
+import serviceMasterService from '../services/serviceMasterService';
 import jobCardsService from '../services/jobCardsService';
 import customersService from '../services/customersService';
 import vehiclesService from '../services/vehiclesService';
@@ -13,12 +14,12 @@ import Loader from '../components/Loader';
 import CustomerVehicleModal from '../components/CustomerVehicleModal';
 import ErrorPage from './ErrorPage';
 
-const STATUS_OPTIONS = ['BOOKED', 'CONFIRMED', 'ARRIVED', 'NO_SHOW', 'CANCELLED', 'COMPLETED'];
 const asList = (data) => (Array.isArray(data) ? data : data?.content || []);
+const isActive = (s) => String(s.status ?? 'active').toLowerCase() === 'active';
 
 const emptyForm = () => ({
   customerId: '', vehicleId: '', appointmentDate: '', appointmentTime: '',
-  requestedService: '', notes: '', status: 'BOOKED',
+  requestedService: '', notes: '',
 });
 
 export default function Appointments() {
@@ -32,6 +33,9 @@ export default function Appointments() {
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [services, setServices] = useState([]);
+  const [servicesLoading, setServicesLoading] = useState(true);
+  const [servicesError, setServicesError] = useState(false);
 
   const loadAppointments = () => {
     setLoadError(false);
@@ -40,10 +44,21 @@ export default function Appointments() {
   const loadCustomers = () => customersService.getAll().then((data) => setCustomers(asList(data)));
   const loadVehicles = () => vehiclesService.getAll().then((data) => setVehicles(asList(data)));
 
+  const loadServices = () => {
+    setServicesLoading(true);
+    setServicesError(false);
+    return serviceMasterService
+      .getAll()
+      .then((data) => setServices(asList(data).filter(isActive)))
+      .catch(() => setServicesError(true))
+      .finally(() => setServicesLoading(false));
+  };
+
   useEffect(() => {
     loadAppointments();
     loadCustomers();
     loadVehicles();
+    loadServices();
   }, []);
 
   const customerVehicles = useMemo(
@@ -91,7 +106,6 @@ export default function Appointments() {
         appointmentTime: form.appointmentTime || null,
         requestedService: form.requestedService,
         notes: form.notes,
-        status: form.status,
       });
       toast.success('Appointment booked');
       setShowForm(false);
@@ -119,6 +133,24 @@ export default function Appointments() {
 
   if (loadError) return <ErrorPage message="Could not load appointments. Check your connection and try again." onRetry={loadAppointments} />;
   if (!appointments) return <Loader label="Loading appointments..." />;
+
+  let serviceOptions;
+  if (servicesLoading) {
+    serviceOptions = <option value="">Loading services...</option>;
+  } else if (servicesError) {
+    serviceOptions = <option value="">Unable to load services. Please try again.</option>;
+  } else if (services.length === 0) {
+    serviceOptions = <option value="">No services available</option>;
+  } else {
+    serviceOptions = (
+      <>
+        <option value="">Select Service</option>
+        {services.map((s) => (
+          <option key={s.serviceId} value={s.serviceName}>{s.serviceName}</option>
+        ))}
+      </>
+    );
+  }
 
   return (
     <div>
@@ -245,13 +277,19 @@ export default function Appointments() {
 
           <div className="col-md-6">
             <label className="form-label">Requested Service</label>
-            <input className="form-control" value={form.requestedService} onChange={(e) => setForm((prev) => ({ ...prev, requestedService: e.target.value }))} />
-          </div>
-          <div className="col-md-6">
-            <label className="form-label">Status</label>
-            <select className="form-select" value={form.status} onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value }))}>
-              {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+            <select
+              className="form-select"
+              value={form.requestedService}
+              onChange={(e) => setForm((prev) => ({ ...prev, requestedService: e.target.value }))}
+              disabled={servicesLoading || servicesError}
+            >
+              {serviceOptions}
             </select>
+            {servicesError && (
+              <div className="form-text text-danger">
+                Unable to load services. Please try again.
+              </div>
+            )}
           </div>
 
           <div className="col-12">

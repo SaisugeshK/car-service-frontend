@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 import RequireSuperAdmin from './RequireSuperAdmin';
+import RequireOperationalAccess from './RequireOperationalAccess';
 import MainLayout from '../layouts/MainLayout';
 import Loader from '../components/Loader';
 
@@ -56,6 +57,14 @@ const Users = lazy(() => import('../pages/Users'));
 const Roles = lazy(() => import('../pages/Roles'));
 const AuditLog = lazy(() => import('../pages/AuditLog'));
 
+// HRM/payroll
+const AttendancePage = lazy(() => import('../pages/Attendance'));
+const LeaveRequests = lazy(() => import('../pages/LeaveRequests'));
+const OvertimePage = lazy(() => import('../pages/Overtime'));
+const EmployeeSalary = lazy(() => import('../pages/EmployeeSalary'));
+const PayrollRuns = lazy(() => import('../pages/PayrollRuns'));
+const MyPayslips = lazy(() => import('../pages/MyPayslips'));
+
 // Legacy — kept mounted but unlinked from the sidebar. Their tables/APIs/data are untouched;
 // these detail-record screens are just no longer part of the day-to-day workshop workflow
 // (Job Card -> Estimate -> Invoice generates what used to require managing these by hand).
@@ -89,6 +98,11 @@ export default function AppRoutes() {
 
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
+            {/* HRM/payroll — an EMPLOYEE lands only here; RequireOperationalAccess below sends
+                them straight back to it and hides everything else in this file. */}
+            <Route path="/my-payslips" element={<MyPayslips />} />
+
+            <Route element={<RequireOperationalAccess />}>
             <Route path="/" element={<DashboardRouter />} />
 
             <Route path="/appointments" element={<Appointments />} />
@@ -123,6 +137,15 @@ export default function AppRoutes() {
 
             <Route path="/product-taxes" element={<ProductTaxes />} />
 
+            {/* HRM/payroll — SUPER_ADMIN + MANAGER (spec §23), same visibility as the rest of the
+                operational routes in this block; kept off technicians/EMPLOYEE-role logins by
+                RequireOperationalAccess above, not by a SUPER_ADMIN-only gate. */}
+            <Route path="/attendance" element={<AttendancePage />} />
+            <Route path="/leave-requests" element={<LeaveRequests />} />
+            <Route path="/overtime" element={<OvertimePage />} />
+            <Route path="/employee-salary" element={<EmployeeSalary />} />
+            <Route path="/payroll" element={<PayrollRuns />} />
+
             {/* SUPER_ADMIN only — owner-level financial/system screens (Phase 19). */}
             <Route element={<RequireSuperAdmin />}>
               <Route path="/reports" element={<Reports />} />
@@ -148,6 +171,7 @@ export default function AppRoutes() {
             <Route path="/cash-closing" element={<CashClosing />} />
             <Route path="/stock-movements" element={<StockMovements />} />
             <Route path="/pos" element={<PointOfSale />} />
+            </Route>
           </Route>
         </Route>
 
