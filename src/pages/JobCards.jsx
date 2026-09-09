@@ -7,6 +7,7 @@ import customersService from '../services/customersService';
 import vehiclesService from '../services/vehiclesService';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
+import ConfirmDialog from '../components/ConfirmDialog';
 import SearchBar from '../components/SearchBar';
 import Loader from '../components/Loader';
 import ErrorPage from './ErrorPage';
@@ -37,6 +38,8 @@ export default function JobCards() {
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [showForm, setShowForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [customerId, setCustomerId] = useState('');
   const [vehicleId, setVehicleId] = useState('');
   const [complaint, setComplaint] = useState('');
@@ -115,6 +118,21 @@ export default function JobCards() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await jobCardsService.remove(deleteTarget.jobCardId);
+      toast.success(`Job card ${deleteTarget.jobCardNumber} deleted`);
+      setDeleteTarget(null);
+      load();
+    } catch {
+      // Global toast already shown by the axios interceptor (e.g. "already has an invoice").
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (loadError) return <ErrorPage message="Could not load job cards. Check your connection and try again." onRetry={loadAll} />;
   if (!jobCards) return <Loader label="Loading job cards..." />;
 
@@ -155,6 +173,7 @@ export default function JobCards() {
         emptyTitle="No job cards yet"
         emptyMessage='Click "New Job Card" when a vehicle arrives at the workshop.'
         onRowClick={(row) => navigate(`/job-cards/${row.jobCardId}`)}
+        onDelete={(row) => setDeleteTarget(row)}
         columns={[
           { key: 'jobCardNumber', label: 'Job Card #', sortable: true },
           { key: 'customerName', label: 'Customer' },
@@ -236,6 +255,20 @@ export default function JobCards() {
           <textarea id="jc-complaint" className="form-control" rows={3} value={complaint} onChange={(e) => setComplaint(e.target.value)} />
         </div>
       </Modal>
+
+      <ConfirmDialog
+        show={Boolean(deleteTarget)}
+        title="Delete job card?"
+        message={
+          deleteTarget
+            ? `Delete job card ${deleteTarget.jobCardNumber} for ${deleteTarget.customerName || 'this customer'}? This also removes its estimates and inspection notes and can't be undone. A job card that already has an invoice can't be deleted.`
+            : ''
+        }
+        confirmLabel="Delete job card"
+        isLoading={isDeleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
