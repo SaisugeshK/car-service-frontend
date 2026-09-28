@@ -3,6 +3,11 @@ import * as yup from 'yup';
 const phoneRegex = /^[0-9]{7,15}$/;
 const barcodeRegex = /^[0-9A-Za-z-]{4,32}$/;
 
+// An optional number field left blank arrives as '' from the form — that means "not set", not
+// "invalid number". Without this, yup casts '' to NaN and fails typeError, so a form could never be
+// saved with an optional select/number left empty (e.g. a complaint with no vehicle or assignee).
+const emptyToNull = (value, original) => (original === '' || original === null || original === undefined ? null : value);
+
 export const loginSchema = yup.object({
   email: yup.string().email('Enter a valid email').required('Email is required'),
   password: yup.string().required('Password is required'),
@@ -125,11 +130,11 @@ export const vehicleSchema = yup.object({
   vehicleModel: yup.string().required('Vehicle model is required'),
   variant: yup.string().nullable(),
   registrationNumber: yup.string().required('Registration number is required'),
-  odometer: yup.number().typeError('Enter a valid odometer reading').min(0).nullable(),
+  odometer: yup.number().transform(emptyToNull).typeError('Enter a valid odometer reading').min(0).nullable(),
   vehicleType: yup.string().nullable(),
   fuelType: yup.string().nullable(),
   color: yup.string().nullable(),
-  year: yup.number().typeError('Enter a valid year').nullable(),
+  year: yup.number().transform(emptyToNull).typeError('Enter a valid year').nullable(),
   chassisNumber: yup.string().nullable(),
   engineNumber: yup.string().nullable(),
   vehicleCategory: yup.string().required('Select Car or Bike'),
@@ -202,7 +207,7 @@ export const paymentSchema = yup.object({
   paymentMethod: yup.string().required('Payment method is required'),
   transactionReference: yup.string().nullable(),
   amount: yup.number().typeError('Enter a valid amount').positive('Must be positive').required('Amount is required'),
-  receivedByUserId: yup.number().typeError('Select who received this payment').nullable(),
+  receivedByUserId: yup.number().transform(emptyToNull).typeError('Select who received this payment').nullable(),
   notes: yup.string().nullable(),
 });
 
@@ -294,19 +299,19 @@ export const invoiceItemSchema = yup.object({
 export const saleSchema = yup.object({
   customerId: yup.number().typeError('Customer is required').required('Customer is required'),
   invoiceNumber: yup.string().nullable(),
-  totalAmount: yup.number().typeError('Enter a valid amount').min(0).nullable(),
+  totalAmount: yup.number().transform(emptyToNull).typeError('Enter a valid amount').min(0).nullable(),
   paymentStatus: yup.string().nullable(),
 });
 
 export const appointmentSchema = yup.object({
   customerId: yup.number().typeError('Customer is required').required('Customer is required'),
-  vehicleId: yup.number().typeError('Enter a valid vehicle').nullable(),
+  vehicleId: yup.number().transform(emptyToNull).typeError('Enter a valid vehicle').nullable(),
   phone: yup.string().nullable(),
   appointmentDate: yup.string().required('Appointment date is required'),
   appointmentTime: yup.string().nullable(),
   requestedService: yup.string().nullable(),
   notes: yup.string().nullable(),
-  advisorUserId: yup.number().typeError('Enter a valid advisor').nullable(),
+  advisorUserId: yup.number().transform(emptyToNull).typeError('Enter a valid advisor').nullable(),
   status: yup.string().required('Status is required'),
 });
 
@@ -314,16 +319,16 @@ export const serviceReminderSchema = yup.object({
   vehicleId: yup.number().typeError('Vehicle is required').required('Vehicle is required'),
   reminderType: yup.string().nullable(),
   dueDate: yup.string().nullable(),
-  dueOdometer: yup.number().typeError('Enter a valid odometer reading').min(0).nullable(),
+  dueOdometer: yup.number().transform(emptyToNull).typeError('Enter a valid odometer reading').min(0).nullable(),
   notes: yup.string().nullable(),
   status: yup.string().nullable(),
 });
 
 export const reviewSchema = yup.object({
   customerId: yup.number().typeError('Customer is required').required('Customer is required'),
-  vehicleId: yup.number().typeError('Enter a valid vehicle').nullable(),
-  jobCardId: yup.number().typeError('Enter a valid job card').nullable(),
-  invoiceId: yup.number().typeError('Enter a valid invoice').nullable(),
+  vehicleId: yup.number().transform(emptyToNull).typeError('Enter a valid vehicle').nullable(),
+  jobCardId: yup.number().transform(emptyToNull).typeError('Enter a valid job card').nullable(),
+  invoiceId: yup.number().transform(emptyToNull).typeError('Enter a valid invoice').nullable(),
   rating: yup.number().typeError('Overall rating is required').min(1).max(5).required('Overall rating is required'),
   serviceQualityRating: yup.number().typeError('Enter 1-5').min(1).max(5).nullable().transform((v) => (Number.isNaN(v) ? null : v)),
   staffBehaviorRating: yup.number().typeError('Enter 1-5').min(1).max(5).nullable().transform((v) => (Number.isNaN(v) ? null : v)),
@@ -336,24 +341,33 @@ export const offerSchema = yup.object({
   offerName: yup.string().required('Offer name is required'),
   description: yup.string().nullable(),
   discountType: yup.string().required('Discount type is required'),
-  discountValue: yup.number().typeError('Enter a valid amount').positive('Must be positive').required('Discount value is required'),
-  startDate: yup.string().nullable(),
-  endDate: yup.string().nullable(),
+  discountValue: yup.number().typeError('Enter a valid amount').positive('Must be positive').required('Discount value is required')
+    .when('discountType', {
+      is: 'PERCENTAGE',
+      then: (s) => s.max(100, 'A percentage cannot be more than 100'),
+    }),
+  startDateTime: yup.string().nullable(),
+  endDateTime: yup.string().nullable()
+    .test('after-start', 'End must be after the start', function check(end) {
+      const { startDateTime } = this.parent;
+      return !end || !startDateTime || new Date(end) > new Date(startDateTime);
+    }),
   vehicleType: yup.string().nullable(),
-  categoryId: yup.number().typeError('Enter a valid category').nullable(),
-  minimumBillAmount: yup.number().typeError('Enter a valid amount').min(0).nullable().transform((v) => (Number.isNaN(v) ? null : v)),
+  categoryId: yup.number().typeError('Enter a valid category').nullable().transform((v) => (Number.isNaN(v) ? null : v)),
+  minimumBillAmount: yup.number().typeError('Enter a valid amount').min(0, 'Cannot be negative').nullable().transform((v) => (Number.isNaN(v) ? null : v)),
+  usageLimit: yup.number().typeError('Enter a whole number').integer('Enter a whole number').min(1, 'At least 1').nullable().transform((v) => (Number.isNaN(v) ? null : v)),
   terms: yup.string().nullable(),
   status: yup.string().required('Status is required'),
 });
 
 export const complaintSchema = yup.object({
   customerId: yup.number().typeError('Customer is required').required('Customer is required'),
-  vehicleId: yup.number().typeError('Enter a valid vehicle').nullable(),
-  jobCardId: yup.number().typeError('Enter a valid job card').nullable(),
+  vehicleId: yup.number().transform(emptyToNull).typeError('Enter a valid vehicle').nullable(),
+  jobCardId: yup.number().transform(emptyToNull).typeError('Enter a valid job card').nullable(),
   type: yup.string().nullable(),
   description: yup.string().required('Description is required'),
   priority: yup.string().nullable(),
-  assignedToUserId: yup.number().typeError('Enter a valid staff member').nullable(),
+  assignedToUserId: yup.number().transform(emptyToNull).typeError('Enter a valid staff member').nullable(),
   status: yup.string().nullable(),
   resolution: yup.string().nullable(),
   resolutionDate: yup.string().nullable(),
@@ -396,7 +410,7 @@ export const salaryConfigSchema = yup.object({
 
 export const followUpSchema = yup.object({
   customerId: yup.number().typeError('Customer is required').required('Customer is required'),
-  vehicleId: yup.number().typeError('Enter a valid vehicle').nullable(),
+  vehicleId: yup.number().transform(emptyToNull).typeError('Enter a valid vehicle').nullable(),
   reminderDate: yup.string().nullable(),
   customerResponse: yup.string().nullable(),
   status: yup.string().required('Status is required'),

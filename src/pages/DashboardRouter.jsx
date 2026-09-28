@@ -1,11 +1,10 @@
 import { useAuth } from '../context/AuthContext';
 import SuperAdminDashboard from './SuperAdminDashboard';
-import ManagerDashboard from './ManagerDashboard';
+import EmployeeDashboard from './EmployeeDashboard';
 
-// SUPER_ADMIN gets the owner-level dashboard (Phase 20); MANAGER gets the operational
-// dashboard (Phase 21) — today's jobs/approvals/QC/complaints/reminders/workload, no
-// revenue or financial-report figures.
+// SUPER_ADMIN gets the owner-level dashboard with revenue. An EMPLOYEE gets their own work —
+// assigned job cards/appointments, attendance, payslips, complaints — never revenue or salary.
 export default function DashboardRouter() {
   const { isSuperAdmin } = useAuth();
-  return isSuperAdmin ? <SuperAdminDashboard /> : <ManagerDashboard />;
+  return isSuperAdmin ? <SuperAdminDashboard /> : <EmployeeDashboard />;
 }

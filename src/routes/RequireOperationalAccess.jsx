@@ -1,17 +1,22 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { NAV_GROUPS } from '../layouts/Sidebar';
 
-// HRM/payroll — before the EMPLOYEE role existed, every authenticated non-SUPER_ADMIN user was
-// implicitly MANAGER-level and saw the full operational app (Job Cards, Invoices, Customers,
-// ...). Adding EMPLOYEE as a real login role means that assumption breaks unless something
-// explicitly fences it off: an EMPLOYEE must see only "My Payslips", never the rest of the ERP.
-// This wraps every operational route (everything except /my-payslips itself); RequireSuperAdmin
-// still layers on top of this for the owner-level screens.
+// Pages an EMPLOYEE may open: every sidebar item flagged `employee: true`, plus the detail pages
+// under them (a job card, a customer). Everything else is SUPER_ADMIN only. The backend enforces
+// the same split (SecurityConfig) — this just keeps the UI from showing a page it would refuse.
+const EMPLOYEE_PATHS = NAV_GROUPS.flatMap((g) => g.items).filter((i) => i.employee).map((i) => i.to);
+
+const employeeCanOpen = (pathname) => EMPLOYEE_PATHS.some((p) => (p === '/'
+  ? pathname === '/'
+  : pathname === p || pathname.startsWith(`${p}/`)));
+
 export default function RequireOperationalAccess() {
-  const { isEmployee } = useAuth();
+  const { isSuperAdmin } = useAuth();
+  const { pathname } = useLocation();
 
-  if (isEmployee) {
-    return <Navigate to="/my-payslips" replace />;
+  if (!isSuperAdmin && !employeeCanOpen(pathname)) {
+    return <Navigate to="/" replace />;
   }
 
   return <Outlet />;

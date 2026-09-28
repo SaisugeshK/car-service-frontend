@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import settingsService from '../services/settingsService';
+import api from '../api/axios';
 
 // jsPDF + autotable are a large dependency (~300KB) needed only when someone actually clicks
 // Download/Print/Share — not on every page load. Dynamic-imported here so it lands in its own
@@ -33,9 +33,10 @@ const DEFAULT_FOOTER = 'Thank you for visiting us.';
 export async function getCompanyDetails() {
   if (cachedCompany) return cachedCompany;
   try {
-    const data = await settingsService.getAll();
-    const list = Array.isArray(data) ? data : data?.content || [];
-    const get = (key, fallback) => list.find((s) => s.settingKey === key)?.settingValue || fallback;
+    // /company-details, not /settings — it's readable by an EMPLOYEE too (payslip PDFs), and
+    // exposes only the letterhead keys, never the full settings table.
+    const details = await api.get('/company-details').then((res) => res.data || {});
+    const get = (key, fallback) => details[key] || fallback;
     cachedCompany = {
       name: get('company_name', 'AutoCare ERP'),
       address: get('company_address', ''),
@@ -139,6 +140,9 @@ export async function buildInvoiceDoc(invoice, company) {
   const { label: balLabel, value: balValue } = balanceLabel(invoice.balanceAmount);
   const summary = [
     ['Subtotal', Number(invoice.subtotal ?? 0).toFixed(2)],
+    ...(invoice.couponCode
+      ? [[`Offer: ${invoice.offerName} (${invoice.couponCode})`, Number(invoice.offerDiscountAmount ?? 0).toFixed(2)]]
+      : []),
     ['Discount', Number(invoice.discountAmount ?? 0).toFixed(2)],
     ['CGST', Number(invoice.cgstAmount ?? 0).toFixed(2)],
     ['SGST', Number(invoice.sgstAmount ?? 0).toFixed(2)],

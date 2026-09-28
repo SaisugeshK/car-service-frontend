@@ -64,14 +64,13 @@ export function AuthProvider({ children }) {
     toast.success('Logged out');
   };
 
-  // SUPER_ADMIN = full access. A user with no role assigned yet (null) gets treated as
-  // MANAGER-level — least privilege, not a crash — until a SUPER_ADMIN assigns one via Users.
-  const role = user?.role || (user ? 'MANAGER' : null);
+  // Two roles: SUPER_ADMIN (everything) and EMPLOYEE (own payslips + own attendance, read-only).
+  // Anything that isn't SUPER_ADMIN — including no role or an unknown/retired one — gets the
+  // employee view: least privilege, never accidental full access. The backend enforces the same
+  // split (SecurityConfig); this only decides what the UI shows.
+  const role = user?.role || (user ? 'EMPLOYEE' : null);
   const isSuperAdmin = role === 'SUPER_ADMIN';
-  // HRM/payroll — EMPLOYEE is a real seeded role (RoleSeeder.java) for staff who log in to see
-  // only their own payslip; never backfilled onto a roleless account, so this never accidentally
-  // catches an existing SUPER_ADMIN/MANAGER user.
-  const isEmployee = role === 'EMPLOYEE';
+  const isEmployee = Boolean(user) && !isSuperAdmin;
 
   const value = useMemo(
     () => ({ user, role, isSuperAdmin, isEmployee, isAuthenticated, initializing, login, logout }),

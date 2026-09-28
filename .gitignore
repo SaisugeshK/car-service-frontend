@@ -4,3 +4,8 @@ dist-ssr
 *.local
 .env.local
 .DS_Store
+
+# Playwright E2E output (e2e-results/.auth holds login tokens — never commit it)
+test-results/
+playwright-report/
+e2e-results/

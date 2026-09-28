@@ -1,3 +1,4 @@
+import { useAuth } from '../context/AuthContext';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FiPlus } from 'react-icons/fi';
@@ -13,6 +14,8 @@ const asList = (data) => (Array.isArray(data) ? data : data?.content || []);
 // A deliberate, logged IN/OUT correction — not free-form stock editing. Every other stock
 // change (Purchase, Invoice, Returns) happens automatically elsewhere.
 export default function StockAdjustments() {
+  // Read-only for an EMPLOYEE — the API refuses their writes anyway; this hides the buttons.
+  const { isSuperAdmin } = useAuth();
   const [products, setProducts] = useState(null);
   const [movements, setMovements] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -77,9 +80,11 @@ export default function StockAdjustments() {
     <div>
       <div className="erp-page-header">
         <h1 className="erp-page-title">Stock Adjustments</h1>
-        <button className="btn btn-primary d-flex align-items-center gap-1" onClick={openCreate}>
-          <FiPlus /> New Adjustment
-        </button>
+        {isSuperAdmin && (
+          <button className="btn btn-primary d-flex align-items-center gap-1" onClick={openCreate}>
+            <FiPlus /> New Adjustment
+          </button>
+        )}
       </div>
 
       <DataTable

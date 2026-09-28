@@ -1,3 +1,4 @@
+import { useAuth } from '../context/AuthContext';
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FiPlus, FiTrash2 } from 'react-icons/fi';
@@ -14,6 +15,8 @@ import ErrorPage from './ErrorPage';
 const emptyLine = () => ({ productId: '', quantity: 1, purchasePrice: 0, taxAmount: 0 });
 
 export default function Purchases() {
+  // Read-only for an EMPLOYEE — the API refuses their writes anyway; this hides the buttons.
+  const { isSuperAdmin } = useAuth();
   const { items, isLoading, isSaving, create, remove } = useCrud(purchasesService, {
     entityName: 'Purchase',
   });
@@ -108,15 +111,17 @@ export default function Purchases() {
     <div>
       <div className="erp-page-header">
         <h1 className="erp-page-title">Purchases</h1>
-        <button className="btn btn-primary d-flex align-items-center gap-1" onClick={openCreate}>
-          <FiPlus /> New Purchase
-        </button>
+        {isSuperAdmin && (
+          <button className="btn btn-primary d-flex align-items-center gap-1" onClick={openCreate}>
+            <FiPlus /> New Purchase
+          </button>
+        )}
       </div>
 
       <DataTable
         isLoading={isLoading}
         rows={items}
-        onDelete={setDeletingRow}
+        onDelete={isSuperAdmin ? setDeletingRow : undefined}
         emptyTitle="No purchases yet"
         emptyMessage='Click "New Purchase" to record stock coming in from a supplier.'
         columns={[

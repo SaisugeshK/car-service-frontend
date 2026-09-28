@@ -1,3 +1,4 @@
+import { useAuth } from '../context/AuthContext';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -23,6 +24,8 @@ const emptyForm = () => ({
 });
 
 export default function Appointments() {
+  // Read-only for an EMPLOYEE — the API refuses their writes anyway; this hides the buttons.
+  const { isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState(null);
   const [customers, setCustomers] = useState([]);
@@ -158,9 +161,11 @@ export default function Appointments() {
         <h1 className="erp-page-title">Appointments</h1>
         <div className="d-flex align-items-center gap-2">
           <SearchBar value={search} onChange={setSearch} placeholder="Search appointments..." />
-          <button className="btn btn-primary d-flex align-items-center gap-1" onClick={openCreate}>
-            <FiPlus /> New Appointment
-          </button>
+          {isSuperAdmin && (
+            <button className="btn btn-primary d-flex align-items-center gap-1" onClick={openCreate}>
+              <FiPlus /> New Appointment
+            </button>
+          )}
         </div>
       </div>
 
@@ -195,7 +200,7 @@ export default function Appointments() {
           {
             key: 'jobCard',
             label: 'Job Card',
-            render: (row) => (
+            render: (row) => (isSuperAdmin || row.jobCardId ? (
               <button
                 className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
                 onClick={() => convertToJobCard(row)}
@@ -203,7 +208,7 @@ export default function Appointments() {
               >
                 <FiArrowRightCircle size={13} /> {row.jobCardId ? 'Open' : 'Convert'}
               </button>
-            ),
+            ) : '—'),
           },
         ]}
       />

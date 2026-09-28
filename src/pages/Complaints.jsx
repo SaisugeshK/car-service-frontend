@@ -6,6 +6,7 @@ import customersService from '../services/customersService';
 import vehiclesService from '../services/vehiclesService';
 import jobCardsService from '../services/jobCardsService';
 import usersService from '../services/usersService';
+import { useAuth } from '../context/AuthContext';
 import { complaintSchema } from '../utils/validationSchemas';
 import Loader from '../components/Loader';
 import ErrorPage from './ErrorPage';
@@ -25,6 +26,7 @@ const PRIORITY_TONE = { LOW: 'bg-secondary', MEDIUM: 'bg-info text-dark', HIGH: 
 const STATUS_TONE = { OPEN: 'bg-danger', IN_PROGRESS: 'bg-warning text-dark', RESOLVED: 'bg-success', CLOSED: 'bg-secondary' };
 
 export default function Complaints() {
+  const { isSuperAdmin } = useAuth();
   const [customers, setCustomers] = useState(null);
   const [vehicles, setVehicles] = useState([]);
   const [jobCards, setJobCards] = useState([]);
@@ -36,12 +38,14 @@ export default function Complaints() {
     customersService.getAll().then((data) => setCustomers(asList(data))).catch(() => setLoadError(true));
     vehiclesService.getAll().then((data) => setVehicles(asList(data)));
     jobCardsService.getAll().then((data) => setJobCards(asList(data)));
-    // GET /api/users is SUPER_ADMIN-only on the backend — non-critical display data here
-    // (assignee name lookup), so fail quietly for a MANAGER rather than an unhandled rejection.
-    usersService.getAll(undefined, { skipErrorToast: true }).then((data) => setUsers(asList(data))).catch(() => setUsers([]));
+    // GET /api/users is SUPER_ADMIN-only — only used for the assignee dropdown/name lookup, so an
+    // EMPLOYEE doesn't call it at all (the 403 would otherwise land in their console every visit).
+    if (isSuperAdmin) {
+      usersService.getAll(undefined, { skipErrorToast: true }).then((data) => setUsers(asList(data))).catch(() => setUsers([]));
+    }
   };
 
-  useEffect(load, []);
+  useEffect(load, [isSuperAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loadError) return <ErrorPage message="Could not load complaints. Check your connection and try again." onRetry={load} />;
   if (!customers) return <Loader label="Loading complaints..." />;
@@ -50,6 +54,8 @@ export default function Complaints() {
     title: 'Customer Complaints',
     entityName: 'Complaint',
     service: complaintsService,
+    // Employees can log complaints (not edit or delete them).
+    employeeCanCreate: true,
     searchKeys: ['description', 'customerName'],
     defaultValues: {
       customerId: '', vehicleId: '', jobCardId: '', type: 'OTHER', description: '',

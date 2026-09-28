@@ -8,6 +8,8 @@ import NotificationCenter from '../components/NotificationCenter';
 
 function findRouteMeta(pathname) {
   if (pathname.startsWith('/job-cards/')) return { group: 'Workshop', label: 'Job Card' };
+  if (pathname === '/my-payslips') return { group: 'My Account', label: 'My Payslips' };
+  if (pathname === '/my-attendance') return { group: 'My Account', label: 'My Attendance' };
   for (const group of NAV_GROUPS) {
     const item = group.items.find((i) => i.to === pathname);
     if (item) return { group: group.title, label: item.label };
@@ -22,7 +24,7 @@ function initialsOf(text) {
 }
 
 export default function Navbar({ onToggleSidebar }) {
-  const { user, logout } = useAuth();
+  const { user, logout, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -58,9 +60,11 @@ export default function Navbar({ onToggleSidebar }) {
       </div>
 
       <div className="ms-auto d-flex align-items-center gap-2">
-        <GlobalSearch />
+        {/* Search and notifications read customers/jobs/invoices/stock — management data an
+            EMPLOYEE has no access to (the API would refuse it anyway). */}
+        {isSuperAdmin && <GlobalSearch />}
 
-        <NotificationCenter />
+        {isSuperAdmin && <NotificationCenter />}
 
         <div className="position-relative" ref={menuRef}>
           <button

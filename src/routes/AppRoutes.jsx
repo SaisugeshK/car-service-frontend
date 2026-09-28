@@ -25,6 +25,7 @@ const Inspections = lazy(() => import('../pages/Inspections'));
 const Customers = lazy(() => import('../pages/Customers'));
 const CustomerDetail = lazy(() => import('../pages/CustomerDetail'));
 const Vehicles = lazy(() => import('../pages/Vehicles'));
+const Visits = lazy(() => import('../pages/Visits'));
 
 // Catalog
 const Services = lazy(() => import('../pages/Services'));
@@ -42,6 +43,7 @@ const Estimates = lazy(() => import('../pages/Estimates'));
 const Invoices = lazy(() => import('../pages/Invoices'));
 const Payments = lazy(() => import('../pages/Payments'));
 const Returns = lazy(() => import('../pages/Returns'));
+const Expenses = lazy(() => import('../pages/Expenses'));
 
 // Customer relationship
 const ServiceReminders = lazy(() => import('../pages/ServiceReminders'));
@@ -64,6 +66,7 @@ const OvertimePage = lazy(() => import('../pages/Overtime'));
 const EmployeeSalary = lazy(() => import('../pages/EmployeeSalary'));
 const PayrollRuns = lazy(() => import('../pages/PayrollRuns'));
 const MyPayslips = lazy(() => import('../pages/MyPayslips'));
+const MyAttendance = lazy(() => import('../pages/MyAttendance'));
 
 // Legacy — kept mounted but unlinked from the sidebar. Their tables/APIs/data are untouched;
 // these detail-record screens are just no longer part of the day-to-day workshop workflow
@@ -98,9 +101,10 @@ export default function AppRoutes() {
 
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
-            {/* HRM/payroll — an EMPLOYEE lands only here; RequireOperationalAccess below sends
-                them straight back to it and hides everything else in this file. */}
+            {/* Employee self-service — the only pages an EMPLOYEE can reach; RequireOperationalAccess
+                below sends any non-SUPER_ADMIN back to /my-payslips from everything else. */}
             <Route path="/my-payslips" element={<MyPayslips />} />
+            <Route path="/my-attendance" element={<MyAttendance />} />
 
             <Route element={<RequireOperationalAccess />}>
             <Route path="/" element={<DashboardRouter />} />
@@ -114,6 +118,7 @@ export default function AppRoutes() {
             <Route path="/customers" element={<Customers />} />
             <Route path="/customers/:id" element={<CustomerDetail />} />
             <Route path="/vehicles" element={<Vehicles />} />
+            <Route path="/visits" element={<Visits />} />
 
             <Route path="/service-master" element={<Services />} />
             <Route path="/products" element={<Products />} />
@@ -129,6 +134,8 @@ export default function AppRoutes() {
             <Route path="/payments" element={<Payments />} />
             <Route path="/returns" element={<Returns />} />
 
+            <Route path="/expenses" element={<Expenses />} />
+
             <Route path="/service-reminders" element={<ServiceReminders />} />
             <Route path="/follow-ups" element={<Followups />} />
             <Route path="/reviews" element={<Reviews />} />
@@ -137,9 +144,7 @@ export default function AppRoutes() {
 
             <Route path="/product-taxes" element={<ProductTaxes />} />
 
-            {/* HRM/payroll — SUPER_ADMIN + MANAGER (spec §23), same visibility as the rest of the
-                operational routes in this block; kept off technicians/EMPLOYEE-role logins by
-                RequireOperationalAccess above, not by a SUPER_ADMIN-only gate. */}
+            {/* HRM/payroll management — SUPER_ADMIN only, via RequireOperationalAccess above. */}
             <Route path="/attendance" element={<AttendancePage />} />
             <Route path="/leave-requests" element={<LeaveRequests />} />
             <Route path="/overtime" element={<OvertimePage />} />

@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import {
   FiTrendingUp, FiDollarSign, FiAlertTriangle, FiTool, FiFileText, FiCreditCard,
   FiClipboard, FiUserCheck, FiRepeat, FiClock, FiCheckCircle, FiPackage, FiStar, FiAward,
+  FiTrendingDown, FiPieChart,
 } from 'react-icons/fi';
 import { FaCarSide, FaMotorcycle } from 'react-icons/fa';
 import jobCardsService from '../services/jobCardsService';
@@ -12,6 +13,7 @@ import paymentsService from '../services/paymentsService';
 import estimatesService from '../services/estimatesService';
 import productsService from '../services/productsService';
 import reviewsService from '../services/reviewsService';
+import expensesService, { categoryLabel } from '../services/expensesService';
 import Loader from '../components/Loader';
 import ErrorPage from './ErrorPage';
 import { DASHBOARD_TONES as T } from '../utils/dashboardTheme';
@@ -97,7 +99,7 @@ function StatCard({ icon: Icon, label, value, to, color, bgColor, small }) {
 
 export default function SuperAdminDashboard() {
   const [state, setState] = useState({
-    loading: true, error: null, jobCards: [], invoices: [], payments: [], estimates: [], products: [], reviews: [],
+    loading: true, error: null, jobCards: [], invoices: [], payments: [], estimates: [], products: [], reviews: [], expenses: [],
   });
   const [preset, setPreset] = useState('month');
   const [customStart, setCustomStart] = useState('');
@@ -113,13 +115,16 @@ export default function SuperAdminDashboard() {
       estimatesService.getAll(),
       productsService.getAll({ itemType: 'PRODUCT' }),
       reviewsService.getAll(),
+      // Expenses are a newer module — never let them take the whole dashboard down.
+      expensesService.getAll(undefined, { skipErrorToast: true }).catch(() => []),
     ])
-      .then(([jobCards, invoices, payments, estimates, products, reviews]) => {
+      .then(([jobCards, invoices, payments, estimates, products, reviews, expenses]) => {
         if (cancelled) return;
         setState({
           loading: false, error: null,
           jobCards: asList(jobCards), invoices: asList(invoices), payments: asList(payments),
           estimates: asList(estimates), products: asList(products), reviews: asList(reviews),
+          expenses: asList(expenses),
         });
       })
       .catch((error) => { if (!cancelled) setState((s) => ({ ...s, loading: false, error })); });
@@ -148,6 +153,18 @@ export default function SuperAdminDashboard() {
     const totalRevenue = live.reduce((s, i) => s + Number(i.grandTotal || 0), 0);
     return { todaysRevenue, monthlyRevenue, totalRevenue };
   }, [invoices]);
+
+  // This month's expenses against this month's revenue — always the current month, like the
+  // revenue anchors above.
+  const monthlyExpenses = useMemo(() => {
+    const month = dayjs().format('YYYY-MM');
+    const thisMonth = state.expenses.filter((e) => e.expenseDate?.slice(0, 7) === month);
+    const total = thisMonth.reduce((s, e) => s + Number(e.amount || 0), 0);
+    const byCategory = new Map();
+    thisMonth.forEach((e) => byCategory.set(e.category, (byCategory.get(e.category) || 0) + Number(e.amount || 0)));
+    const [topCategory, topAmount] = [...byCategory.entries()].sort((a, b) => b[1] - a[1])[0] || [null, 0];
+    return { total, topCategory, topAmount, net: fixedRevenue.monthlyRevenue - total };
+  }, [state.expenses, fixedRevenue.monthlyRevenue]);
 
   // ---- Everything below respects the date-range + Car/Bike filter ----
   const filteredInvoices = useMemo(
@@ -283,6 +300,28 @@ export default function SuperAdminDashboard() {
         </div>
         <div className="col-sm-6 col-lg-4">
           <StatCard icon={FiTrendingUp} label="Total Revenue (All-Time)" value={currency(fixedRevenue.totalRevenue)} to="/invoices" color={T.brand.color} bgColor={T.brand.bg} />
+        </div>
+        <div className="col-sm-6 col-lg-4">
+          <StatCard icon={FiTrendingDown} label="Expenses This Month" value={currency(monthlyExpenses.total)} to="/expenses" color="#dc2626" bgColor="#fee2e2" />
+        </div>
+        <div className="col-sm-6 col-lg-4">
+          <StatCard
+            icon={FiDollarSign}
+            label="Net This Month (Revenue − Expenses)"
+            value={currency(monthlyExpenses.net)}
+            to="/expenses"
+            color={monthlyExpenses.net >= 0 ? '#16a34a' : '#dc2626'}
+            bgColor={monthlyExpenses.net >= 0 ? '#dcfce7' : '#fee2e2'}
+          />
+        </div>
+        <div className="col-sm-6 col-lg-4">
+          <StatCard
+            icon={FiPieChart}
+            label="Top Expense Category (Month)"
+            value={monthlyExpenses.topCategory ? `${categoryLabel(monthlyExpenses.topCategory)} · ${currency(monthlyExpenses.topAmount)}` : '—'}
+            to="/expenses"
+            small
+          />
         </div>
       </div>
 

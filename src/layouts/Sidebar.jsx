@@ -31,6 +31,8 @@ import {
   FiCalendar as FiCalendarCheck,
   FiClock,
   FiDollarSign,
+  FiTrendingDown,
+  FiLogIn,
 } from 'react-icons/fi';
 import { FaCarSide } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
@@ -44,39 +46,40 @@ import { useCompanyProfile } from '../context/CompanyProfileContext';
 export const NAV_GROUPS = [
   {
     title: 'Overview',
-    items: [{ to: '/', label: 'Dashboard', icon: FiGrid, end: true }],
+    items: [{ to: '/', label: 'Dashboard', icon: FiGrid, end: true, employee: true }],
   },
   {
     title: 'Workshop',
     items: [
-      { to: '/appointments', label: 'Appointments', icon: FiCalendar },
-      { to: '/job-cards', label: 'Job Cards', icon: FiClipboard },
-      { to: '/workshop-board', label: 'Workshop Board', icon: FiTrello },
-      { to: '/inspections', label: 'Inspections', icon: FiCheckSquare },
+      { to: '/appointments', label: 'Appointments', icon: FiCalendar, employee: true },
+      { to: '/job-cards', label: 'Job Cards', icon: FiClipboard, employee: true },
+      { to: '/workshop-board', label: 'Workshop Board', icon: FiTrello, employee: true },
+      { to: '/inspections', label: 'Inspections', icon: FiCheckSquare, employee: true },
     ],
   },
   {
     title: 'Customers',
     items: [
-      { to: '/customers', label: 'Customers', icon: FiUserCheck },
-      { to: '/vehicles', label: 'Vehicles', icon: FaCarSide },
+      { to: '/customers', label: 'Customers', icon: FiUserCheck, employee: true },
+      { to: '/vehicles', label: 'Vehicles', icon: FaCarSide, employee: true },
+      { to: '/visits', label: 'Customer Visits', employeeLabel: 'My Visits', icon: FiLogIn, employee: true },
     ],
   },
   {
     title: 'Catalog',
     items: [
-      { to: '/service-master', label: 'Services', icon: FiTool },
-      { to: '/products', label: 'Products / Parts', icon: FiBox },
-      { to: '/categories', label: 'Categories', icon: FiTag },
+      { to: '/service-master', label: 'Services', icon: FiTool, employee: true },
+      { to: '/products', label: 'Products / Parts', icon: FiBox, employee: true },
+      { to: '/categories', label: 'Categories', icon: FiTag, employee: true },
     ],
   },
   {
     title: 'Inventory',
     items: [
-      { to: '/stock', label: 'Stock', icon: FiPackage },
-      { to: '/purchases', label: 'Purchases', icon: FiShoppingCart },
-      { to: '/suppliers', label: 'Suppliers', icon: FiTruck },
-      { to: '/stock-adjustments', label: 'Stock Adjustments', icon: FiSliders },
+      { to: '/stock', label: 'Stock', icon: FiPackage, employee: true },
+      { to: '/purchases', label: 'Purchases', icon: FiShoppingCart, employee: true },
+      { to: '/suppliers', label: 'Suppliers', icon: FiTruck, employee: true },
+      { to: '/stock-adjustments', label: 'Stock Adjustments', icon: FiSliders, employee: true },
     ],
   },
   {
@@ -89,19 +92,24 @@ export const NAV_GROUPS = [
     ],
   },
   {
+    // Outgoing costs — kept apart from Billing (revenue) so employees can record what they spend
+    // without seeing any revenue. They get their own entries only, as "My Expenses".
+    title: 'Expenses',
+    items: [{ to: '/expenses', label: 'Expenses', employeeLabel: 'My Expenses', icon: FiTrendingDown, employee: true }],
+  },
+  {
     title: 'Customer Relationship',
     items: [
       { to: '/service-reminders', label: 'Service Reminders', icon: FiBell },
       { to: '/follow-ups', label: 'Follow-ups', icon: FiPhoneCall },
       { to: '/reviews', label: 'Reviews', icon: FiStar },
       { to: '/offers', label: 'Offers', icon: FiGift },
-      { to: '/complaints', label: 'Complaints', icon: FiAlertCircle },
+      { to: '/complaints', label: 'Complaints', icon: FiAlertCircle, employee: true },
     ],
   },
   {
-    // HRM/payroll — SUPER_ADMIN + MANAGER (spec §23), same visibility as every other
-    // non-superAdminOnly group here. Never shown to an EMPLOYEE login: Sidebar renders a
-    // completely separate minimal nav for that role, below, bypassing NAV_GROUPS entirely.
+    // HRM/payroll management — SUPER_ADMIN only. An EMPLOYEE gets the separate minimal nav
+    // below, bypassing NAV_GROUPS entirely.
     title: 'Payroll',
     items: [
       { to: '/attendance', label: 'Attendance', icon: FiCalendarCheck },
@@ -136,11 +144,22 @@ export default function Sidebar({ collapsed, onNavigate }) {
     items: group.items.filter((item) => !item.superAdminOnly || isSuperAdmin),
   })).filter((group) => group.items.length > 0);
 
-  // HRM/payroll — an EMPLOYEE login sees only "My Payslips", never the operational nav above
-  // (RequireOperationalAccess enforces this at the route level too — this is just so the sidebar
-  // doesn't dangle links an EMPLOYEE would immediately get redirected away from).
+  // An EMPLOYEE sees the items flagged `employee: true` (workshop, reference data, complaints) plus
+  // their own records — never billing, CRM, offers, payroll management, reports or settings.
+  // RequireOperationalAccess and the backend enforce the same split; this avoids dead links.
   const employeeGroups = [
-    { title: 'Overview', items: [{ to: '/my-payslips', label: 'My Payslips', icon: FiDollarSign, end: true }] },
+    ...NAV_GROUPS.map((group) => ({
+      ...group,
+      items: group.items.filter((item) => item.employee).map((item) => ({ ...item, label: item.employeeLabel || item.label })),
+    }))
+      .filter((group) => group.items.length > 0),
+    {
+      title: 'My Account',
+      items: [
+        { to: '/my-attendance', label: 'My Attendance & Leave', icon: FiCalendarCheck, end: true },
+        { to: '/my-payslips', label: 'My Payslips', icon: FiDollarSign, end: true },
+      ],
+    },
   ];
 
   return (

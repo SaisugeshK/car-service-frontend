@@ -9,6 +9,9 @@ export const jobCardsService = {
     api.post(`/job-cards/from-appointment/${appointmentId}`).then((res) => res.data),
   updateStatus: (id, status) => api.patch(`/job-cards/${id}/status`, { status }).then((res) => res.data),
   generateInvoice: (id, payload) => api.post(`/job-cards/${id}/generate-invoice`, payload).then((res) => res.data),
+  // Single-page job card form: { complaint, expectedDelivery, technicianUserId, couponCode,
+  // discountAmount, paymentMethod, items } — bills the lines as one paid-in-full invoice.
+  quickInvoice: (id, payload) => api.post(`/job-cards/${id}/quick-invoice`, payload).then((res) => res.data),
   // Customer rejected the estimate — bills only the inspection fee. The server refuses this if
   // any estimate for the job card is still APPROVED or awaiting a decision.
   generateInspectionFeeInvoice: (id, payload) => api.post(`/job-cards/${id}/generate-inspection-fee-invoice`, payload).then((res) => res.data),

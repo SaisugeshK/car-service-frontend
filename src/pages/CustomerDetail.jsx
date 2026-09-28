@@ -14,6 +14,10 @@ import reviewsService from '../services/reviewsService';
 import serviceRemindersService from '../services/serviceRemindersService';
 import notificationsService from '../services/notificationsService';
 import AddVehicleModal from '../components/AddVehicleModal';
+import RegularBadge from '../components/RegularBadge';
+import LogVisitModal from '../components/LogVisitModal';
+import visitsService, { purposeLabel } from '../services/visitsService';
+import { useAuth } from '../context/AuthContext';
 import Loader from '../components/Loader';
 import ErrorPage from './ErrorPage';
 
@@ -34,7 +38,10 @@ const INVOICE_TONE = { PAID: 'bg-success', PARTIAL: 'bg-warning text-dark', UNPA
 const COMPLAINT_TONE = { OPEN: 'bg-danger', IN_PROGRESS: 'bg-warning text-dark', RESOLVED: 'bg-success', CLOSED: 'bg-secondary' };
 const REMINDER_TONE = { OVERDUE: 'bg-danger', DUE: 'bg-warning text-dark', UPCOMING: 'bg-info text-dark', DONE: 'bg-success' };
 
-const TABS = ['Overview', 'Vehicles', 'Job Cards', 'Estimates', 'Invoices', 'Payments', 'Complaints', 'Reviews', 'Reminders', 'Offers'];
+const TABS = ['Overview', 'Visit History', 'Vehicles', 'Job Cards', 'Estimates', 'Invoices', 'Payments', 'Complaints', 'Reviews', 'Reminders', 'Offers'];
+// An EMPLOYEE gets no billing, CRM or money figures — and the API refuses those calls anyway.
+const EMPLOYEE_TABS = ['Overview', 'Visit History', 'Vehicles', 'Job Cards', 'Complaints'];
+const none = () => Promise.resolve([]);
 
 function Stars({ value }) {
   if (!value) return '—';
@@ -57,6 +64,8 @@ export default function CustomerDetail() {
   const [tab, setTab] = useState('Overview');
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const { isSuperAdmin } = useAuth();
+  const tabs = isSuperAdmin ? TABS : EMPLOYEE_TABS;
 
   const load = () => {
     setLoadError(false);
@@ -64,13 +73,13 @@ export default function CustomerDetail() {
       customersService.getById(id),
       vehiclesService.getByCustomer(id),
       jobCardsService.getAll(),
-      estimatesService.getAll(),
-      invoicesService.getAll(),
-      paymentsService.getAll(),
+      isSuperAdmin ? estimatesService.getAll() : none(),
+      isSuperAdmin ? invoicesService.getAll() : none(),
+      isSuperAdmin ? paymentsService.getAll() : none(),
       complaintsService.getAll(),
-      reviewsService.getAll(),
-      serviceRemindersService.getAll(),
-      notificationsService.getAll(),
+      isSuperAdmin ? reviewsService.getAll() : none(),
+      isSuperAdmin ? serviceRemindersService.getAll() : none(),
+      isSuperAdmin ? notificationsService.getAll() : none(),
     ]).then(([customer, vehicles, jobCards, estimates, invoices, payments, complaints, reviews, reminders, notifications]) => {
       setData({
         customer,
@@ -87,7 +96,7 @@ export default function CustomerDetail() {
     }).catch(() => setLoadError(true));
   };
 
-  useEffect(load, [id]);
+  useEffect(load, [id, isSuperAdmin]);
 
   // Every list below is fetched whole (same convention as every other page in this app —
   // Estimates/Reviews/Dashboard all filter client-side) and narrowed to this one customer here.
@@ -130,14 +139,19 @@ export default function CustomerDetail() {
       </button>
       <div className="erp-page-header">
         <div>
-          <h1 className="erp-page-title">{customer.customerName}</h1>
+          <h1 className="erp-page-title d-flex align-items-center gap-2 flex-wrap">
+            {customer.customerName} <RegularBadge status={customer.regularStatus} className="fs-6" />
+          </h1>
           <div className="text-secondary small">
             {customer.phone}{customer.city && ` · ${customer.city}`}
+            {` · ${customer.totalVisits || 0} visit${customer.totalVisits === 1 ? '' : 's'}`}
+            {customer.lastVisitDate && ` · Last visit ${dayjs(customer.lastVisitDate).format('DD MMM YYYY')}`}
             {customer.lastServiceDate && ` · Last service ${dayjs(customer.lastServiceDate).format('DD MMM YYYY')}`}
           </div>
         </div>
       </div>
 
+      {isSuperAdmin && (
       <div className="row g-3 mb-3">
         <div className="col-6 col-lg-3">
           <div className="erp-stat-card"><div className="text-secondary small">Total Visits</div><div className="erp-stat-value">{scoped.jobCards.length}</div></div>
@@ -158,9 +172,10 @@ export default function CustomerDetail() {
           </div>
         </div>
       </div>
+      )}
 
       <ul className="nav nav-tabs mb-3" style={{ overflowX: 'auto', flexWrap: 'nowrap' }}>
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <li className="nav-item" key={t} style={{ whiteSpace: 'nowrap' }}>
             <button className={`nav-link ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
               {t}
@@ -176,7 +191,8 @@ export default function CustomerDetail() {
       </ul>
 
       {tab === 'Overview' && <OverviewTab customer={customer} scoped={scoped} navigate={navigate} />}
-      {tab === 'Vehicles' && <VehiclesTab vehicles={vehicles} navigate={navigate} onAddVehicle={() => setShowAddVehicle(true)} />}
+      {tab === 'Visit History' && <VisitHistoryTab customer={customer} vehicles={vehicles} onChanged={load} />}
+      {tab === 'Vehicles' && <VehiclesTab vehicles={vehicles} navigate={navigate} onAddVehicle={isSuperAdmin ? () => setShowAddVehicle(true) : null} />}
       {tab === 'Job Cards' && <JobCardsTab jobCards={scoped.jobCards} navigate={navigate} />}
       {tab === 'Estimates' && <EstimatesTab estimates={scoped.estimates} navigate={navigate} />}
       {tab === 'Invoices' && <InvoicesTab invoices={scoped.invoices} jobCardByInvoiceId={scoped.jobCardByInvoiceId} outstanding={scoped.outstanding} />}
@@ -250,6 +266,56 @@ function OverviewTab({ customer, scoped, navigate }) {
   );
 }
 
+/* ---------------- Visit History ---------------- */
+function VisitHistoryTab({ customer, vehicles, onChanged }) {
+  const [visits, setVisits] = useState(null);
+  const [showLog, setShowLog] = useState(false);
+
+  const loadVisits = () => visitsService.getByCustomer(customer.customerId ?? customer.id)
+    .then((data) => setVisits(asList(data)))
+    .catch(() => setVisits([]));
+  useEffect(() => { loadVisits(); }, [customer.customerId, customer.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="erp-card p-3">
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h6 className="mb-0">Visit History</h6>
+        <button className="btn btn-sm btn-primary d-flex align-items-center gap-1" onClick={() => setShowLog(true)}>
+          <FiPlus size={13} /> Log Visit
+        </button>
+      </div>
+      {visits === null ? <Loader label="Loading visits..." /> : visits.length === 0 ? (
+        <p className="text-secondary small mb-0">No visits recorded yet.</p>
+      ) : (
+        <div className="table-responsive">
+          <table className="table table-sm mb-0">
+            <thead><tr><th>Date</th><th>Purpose</th><th>Vehicle</th><th>Notes</th><th>Handled By</th></tr></thead>
+            <tbody>
+              {visits.map((v) => (
+                <tr key={v.visitId}>
+                  <td className="text-nowrap">{dayjs(v.visitDateTime).format('DD MMM YYYY, hh:mm A')}</td>
+                  <td>{purposeLabel(v.purpose)}{v.source === 'JOB_CARD' && <span className="badge bg-light text-dark border ms-1">Job card</span>}</td>
+                  <td>{v.vehicleModel ? `${v.vehicleModel} (${v.registrationNumber || '—'})` : '—'}</td>
+                  <td className="small">{v.notes || '—'}</td>
+                  <td>{v.handledByName || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {showLog && (
+        <LogVisitModal
+          customer={customer}
+          vehicles={vehicles}
+          onClose={() => setShowLog(false)}
+          onLogged={() => { setShowLog(false); loadVisits(); onChanged(); }}
+        />
+      )}
+    </div>
+  );
+}
+
 /* ---------------- Vehicles ---------------- */
 function VehiclesTab({ vehicles, navigate, onAddVehicle }) {
   const today = dayjs();
@@ -257,9 +323,11 @@ function VehiclesTab({ vehicles, navigate, onAddVehicle }) {
     <div className="erp-card p-3">
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h6 className="mb-0">Vehicles</h6>
-        <button className="btn btn-sm btn-primary d-flex align-items-center gap-1" onClick={onAddVehicle}>
-          <FiPlus size={13} /> Add Vehicle
-        </button>
+        {onAddVehicle && (
+          <button className="btn btn-sm btn-primary d-flex align-items-center gap-1" onClick={onAddVehicle}>
+            <FiPlus size={13} /> Add Vehicle
+          </button>
+        )}
       </div>
       {vehicles.length === 0 ? (
         <p className="text-secondary small mb-0">No vehicles on file yet.</p>

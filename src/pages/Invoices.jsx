@@ -358,6 +358,15 @@ export default function Invoices() {
             </div>
             <div className="d-flex justify-content-between"><span>Service Subtotal</span><span>{Number(viewing.serviceSubtotal ?? 0).toFixed(2)}</span></div>
             <div className="d-flex justify-content-between"><span>Product Subtotal</span><span>{Number(viewing.productSubtotal ?? 0).toFixed(2)}</span></div>
+            {viewing.couponCode && (
+              <div className="d-flex justify-content-between text-success">
+                <span>
+                  Offer: {viewing.offerName} ({viewing.couponCode}) ·{' '}
+                  {viewing.offerDiscountType === 'PERCENTAGE' ? `${Number(viewing.offerDiscountValue)}%` : `₹${Number(viewing.offerDiscountValue ?? 0).toFixed(2)}`}
+                </span>
+                <span>{Number(viewing.offerDiscountAmount ?? 0).toFixed(2)}</span>
+              </div>
+            )}
             <div className="d-flex justify-content-between"><span>Discount</span><span>{Number(viewing.discountAmount ?? 0).toFixed(2)}</span></div>
             <div className="d-flex justify-content-between"><span>CGST</span><span>{Number(viewing.cgstAmount ?? 0).toFixed(2)}</span></div>
             <div className="d-flex justify-content-between"><span>SGST</span><span>{Number(viewing.sgstAmount ?? 0).toFixed(2)}</span></div>

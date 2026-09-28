@@ -1,3 +1,4 @@
+import { useAuth } from '../context/AuthContext';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -27,6 +28,8 @@ const STATUS_BADGE = {
 };
 
 export default function JobCards() {
+  // Read-only for an EMPLOYEE — the API refuses their writes anyway; this hides the buttons.
+  const { isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const vehicleFilter = searchParams.get('vehicleId');
@@ -161,19 +164,21 @@ export default function JobCards() {
             ))}
           </div>
           <SearchBar value={search} onChange={setSearch} placeholder="Search job cards..." />
-          <button className="btn btn-primary d-flex align-items-center gap-1" onClick={openCreate}>
-            <FiPlus /> New Job Card
-          </button>
+          {isSuperAdmin && (
+            <button className="btn btn-primary d-flex align-items-center gap-1" onClick={openCreate}>
+              <FiPlus /> New Job Card
+            </button>
+          )}
         </div>
       </div>
 
       <DataTable
         rows={filtered}
         keyField="jobCardId"
-        emptyTitle="No job cards yet"
-        emptyMessage='Click "New Job Card" when a vehicle arrives at the workshop.'
+        emptyTitle={isSuperAdmin ? 'No job cards yet' : 'No job cards assigned to you'}
+        emptyMessage={isSuperAdmin ? 'Click "New Job Card" when a vehicle arrives at the workshop.' : 'Job cards appear here once you are assigned as technician or advisor.'}
         onRowClick={(row) => navigate(`/job-cards/${row.jobCardId}`)}
-        onDelete={(row) => setDeleteTarget(row)}
+        onDelete={isSuperAdmin ? (row) => setDeleteTarget(row) : undefined}
         columns={[
           { key: 'jobCardNumber', label: 'Job Card #', sortable: true },
           { key: 'customerName', label: 'Customer' },

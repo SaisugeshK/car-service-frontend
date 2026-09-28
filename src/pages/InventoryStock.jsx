@@ -1,3 +1,4 @@
+import { useAuth } from '../context/AuthContext';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -28,6 +29,8 @@ const MOVEMENT_LABEL = {
 // Read-only — stock only ever changes via Purchase, Invoice completion, Returns, or a
 // deliberate Stock Adjustment; there is no free-form manual entry here anymore.
 export default function InventoryStock() {
+  // Read-only for an EMPLOYEE — the API refuses their writes anyway; this hides the buttons.
+  const { isSuperAdmin } = useAuth();
   const [products, setProducts] = useState(null);
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState('');
@@ -73,9 +76,11 @@ export default function InventoryStock() {
         <h1 className="erp-page-title">Stock</h1>
         <div className="d-flex align-items-center gap-2">
           <SearchBar value={search} onChange={setSearch} placeholder="Search products..." />
-          <button className="btn btn-outline-primary" onClick={() => navigate('/stock-adjustments')}>
-            Adjust Stock
-          </button>
+          {isSuperAdmin && (
+            <button className="btn btn-outline-primary" onClick={() => navigate('/stock-adjustments')}>
+              Adjust Stock
+            </button>
+          )}
         </div>
       </div>
       <DataTable

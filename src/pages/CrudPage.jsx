@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { FiPlus } from 'react-icons/fi';
 import useCrud from '../hooks/useCrud';
+import { useAuth } from '../context/AuthContext';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -49,7 +50,14 @@ export default function CrudPage({ config }) {
     hideAddButton = false,
     headerExtra,
     onRowClick,
+    // An EMPLOYEE gets every CrudPage read-only; a page can let them add records (e.g. logging a
+    // complaint) but never edit or delete. The backend enforces the same (SecurityConfig).
+    employeeCanCreate = false,
   } = config;
+
+  const { isSuperAdmin } = useAuth();
+  const canCreate = !hideAddButton && (isSuperAdmin || employeeCanCreate);
+  const canModify = isSuperAdmin;
 
   const { items, isLoading, isSaving, error, load, create, update, remove } = useCrud(service, {
     entityName,
@@ -192,7 +200,7 @@ export default function CrudPage({ config }) {
             />
           )}
           {headerExtra}
-          {!hideAddButton && (
+          {canCreate && (
             <button className="btn btn-primary d-flex align-items-center gap-1" onClick={openCreate}>
               <FiPlus /> Add {entityName}
             </button>
@@ -212,11 +220,11 @@ export default function CrudPage({ config }) {
             rows={pagedRows}
             onRowClick={onRowClick}
             isLoading={isLoading}
-            onEdit={openEdit}
-            onDelete={setDeletingRow}
+            onEdit={canModify ? openEdit : undefined}
+            onDelete={canModify ? setDeletingRow : undefined}
             keyField={keyField}
             emptyTitle={`No ${title.toLowerCase()} yet`}
-            emptyMessage={`Click "Add ${entityName}" to create your first record.`}
+            emptyMessage={canCreate ? `Click "Add ${entityName}" to create your first record.` : ''}
           />
 
           <Pagination
@@ -250,7 +258,7 @@ export default function CrudPage({ config }) {
             {visibleFields.map((f) => (
               <div key={f.name} className={f.fullWidth || f.type === 'note' ? 'col-12' : 'col-md-6'}>
                 {f.type === 'note' ? (
-                  <div className="form-text mt-0 mb-3">{f.text}</div>
+                  <div className="form-text mt-0 mb-3">{typeof f.text === 'function' ? f.text(watchedValues) : f.text}</div>
                 ) : f.type === 'priceGrid' ? (
                   <div>
                     <label className="form-label">{f.label}{f.required && ' *'}</label>
