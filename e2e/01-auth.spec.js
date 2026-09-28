@@ -38,6 +38,9 @@ test.describe('Login', () => {
   });
 
   test('session survives a page reload', { tag: '@critical' }, async ({ page }) => {
+    // WebKit reports a cross-origin request cancelled by the reload as an error, even though the
+    // app catches it (CompanyProfileContext). Dev-only: in production the API is same-origin.
+    page.guard.allow(/due to access control checks/);
     await uiLogin(page, SUPER_ADMIN);
     await loggedIn(page);
     await page.goto('/customers');
