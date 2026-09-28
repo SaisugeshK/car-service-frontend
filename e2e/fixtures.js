@@ -22,8 +22,12 @@ function attachGuard(page, testInfo) {
   // A resource from another site (e.g. Google Fonts) failing to download is the network, not the
   // app — recorded as a warning. Anything from the app or its API still fails the test.
   const isThirdPartyLoadFailure = (msg) => {
+    const text = msg.text();
+    // Firefox reports a failed web-font download with the font URL in the message itself.
+    const fontUrl = /downloadable font: download failed.*source: (\S+?)["\]]*$/i.exec(text)?.[1];
+    if (fontUrl) return !APP_ORIGINS.some((o) => fontUrl.startsWith(o));
     const url = msg.location()?.url || '';
-    return /failed to load resource/i.test(msg.text()) && url && !APP_ORIGINS.some((o) => url.startsWith(o));
+    return /failed to load resource/i.test(text) && url && !APP_ORIGINS.some((o) => url.startsWith(o));
   };
 
   page.on('console', (msg) => {
