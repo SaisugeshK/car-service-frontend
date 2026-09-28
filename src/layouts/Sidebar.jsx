@@ -85,7 +85,6 @@ export const NAV_GROUPS = [
   {
     title: 'Billing',
     items: [
-      { to: '/estimates', label: 'Estimates', icon: FiFileText },
       { to: '/invoices', label: 'Invoices', icon: FiFileText },
       { to: '/payments', label: 'Payments', icon: FiCreditCard },
       { to: '/returns', label: 'Returns', icon: FiRotateCcw },

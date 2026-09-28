@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 import RequireSuperAdmin from './RequireSuperAdmin';
 import RequireOperationalAccess from './RequireOperationalAccess';
@@ -39,7 +39,6 @@ const Suppliers = lazy(() => import('../pages/Suppliers'));
 const StockAdjustments = lazy(() => import('../pages/StockAdjustments'));
 
 // Billing
-const Estimates = lazy(() => import('../pages/Estimates'));
 const Invoices = lazy(() => import('../pages/Invoices'));
 const Payments = lazy(() => import('../pages/Payments'));
 const Returns = lazy(() => import('../pages/Returns'));
@@ -129,7 +128,7 @@ export default function AppRoutes() {
             <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/stock-adjustments" element={<StockAdjustments />} />
 
-            <Route path="/estimates" element={<Estimates />} />
+            <Route path="/estimates" element={<Navigate to="/job-cards" replace />} />
             <Route path="/invoices" element={<Invoices />} />
             <Route path="/payments" element={<Payments />} />
             <Route path="/returns" element={<Returns />} />

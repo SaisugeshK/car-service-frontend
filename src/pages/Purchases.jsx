@@ -85,7 +85,6 @@ export default function Purchases() {
       totalAmount: Number(totals.totalAmount.toFixed(2)),
       tax: Number(totals.tax.toFixed(2)),
       paymentStatus,
-      createdBy: 1,
       items: validLines.map((l) => ({
         productId: Number(l.productId),
         quantity: Number(l.quantity),

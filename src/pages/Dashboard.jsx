@@ -230,7 +230,7 @@ export default function Dashboard() {
           <StatCard icon={FiCheckCircle} label="Ready for Delivery" value={kpis.readyForDelivery} to="/workshop-board" color={T.success.color} bgColor={T.success.bg} />
         </div>
         <div className="col-sm-6 col-lg-3">
-          <StatCard icon={FiClock} label="Waiting for Approval" value={kpis.waitingApproval} to="/estimates" color={T.warning.color} bgColor={T.warning.bg} />
+          <StatCard icon={FiClock} label="Waiting for Approval" value={kpis.waitingApproval} to="/job-cards" color={T.warning.color} bgColor={T.warning.bg} />
         </div>
       </div>
 

@@ -24,7 +24,6 @@ export const EMPLOYEE_ROUTES = [
 
 // SUPER_ADMIN only — an employee opening any of these must be sent back to their dashboard.
 export const ADMIN_ONLY_ROUTES = [
-  { path: '/estimates', title: /estimates/i },
   { path: '/invoices', title: /invoices/i },
   { path: '/payments', title: /payments/i },
   { path: '/returns', title: /returns/i },

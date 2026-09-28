@@ -305,7 +305,6 @@ export default function PointOfSale() {
     paymentMethod,
     paidAmount: Number(paidAmount || 0),
     discountAmount: Number(discountAmount || 0),
-    createdBy: 1,
     items: cart.map((l) => ({
       itemType: l.itemType,
       serviceId: l.itemType === 'SERVICE' ? l.refId : null,
